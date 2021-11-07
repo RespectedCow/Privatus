@@ -1,7 +1,7 @@
 """
-This script will basically act as the launcher for my application.
+This script will basically act as the launcher for the application.
 
-The purpose of this application is to be able to manage my computer and automate tasks.
+The purpose of this application is to be able to manage the user's computer and automate tasks.
 """
 # Importing libraries
 from PyQt5 import QtCore, QtWidgets, QtGui
