@@ -13,6 +13,10 @@ class Database:
         self.cursor = self.database.cursor()
         
     def setup(self):
+        '''
+        Checks if required tables exists otherwise create them
+        '''
+        
         # Check if required tables exist
         print("Checking if required tables exists.")
         self.cursor.execute(''' SELECT count(name) FROM sqlite_master WHERE type='table' AND name='user' ''')
@@ -30,5 +34,8 @@ class Database:
             
             print("User table created.")
             
-    def check_User(self, user, password):
-        
+    def check_if_exist(self, table, key):
+        '''
+        Check if table's row has the passed key
+        '''
+        pass

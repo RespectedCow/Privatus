@@ -4,6 +4,7 @@ import threading
 import pickle
 
 # Import scripts
+from src import database
 
 # Classes
 class Server:
@@ -18,6 +19,10 @@ class Server:
         self.sock = sock
         self.shouldRun = False
         self.threadCount = 0
+        
+        # Init database
+        self.database = database.Database("Cowmanager")
+        self.database.setup()
         
     def run(self):
         self.shouldRun = True
@@ -35,6 +40,8 @@ class Server:
         
     def client_thread(self, client):
         # Identification
-        identification = client.recv(2048)
+        identification = pickle.loads(client.recv(2048)) 
         
-        
+        if self.database.check_if_exist("USERS", identification['username']):
+            # If user exists
+            pass
