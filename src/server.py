@@ -11,7 +11,9 @@ class Server:
     
     def __init__(self, address, port):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.bind(address, port)
+        sock.bind((address, port))
+        
+        sock.listen(5)
         
         # Class variables
         self.address = address
@@ -40,8 +42,18 @@ class Server:
         
     def client_thread(self, client):
         # Identification
-        identification = pickle.loads(client.recv(2048)) 
+        identification = pickle.loads(client.recv(2048))
         
-        if self.database.check_if_exist("USERS", identification['username']):
-            # If user exists
-            pass
+        # Check if returned data is valid
+        if identification['username'] == None or identification['password'] == None:
+            client.close()
+        
+        if self.database.check_if_exist("users", "NAME", identification['username']):
+            print("Client logged in.")
+            success = client.send(pickle.dumps("Success"))
+            
+            while True:
+                message = client.recv(2048)
+                print(pickle.loads(message))
+        else:
+            client.close()
