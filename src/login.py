@@ -12,6 +12,7 @@ from src import connecter
 
 # Main login window
 class LoginWindow(QtWidgets.QMainWindow):
+    logEvent = QtCore.pyqtSignal()
     
     def __init__(self):
         QtWidgets.QMainWindow.__init__(self)
@@ -41,4 +42,5 @@ class LoginWindow(QtWidgets.QMainWindow):
                 'password': password
             }, outfile)
             
-        # Start the connection
+        # Emit signal
+        self.logEvent.emit()

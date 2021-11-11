@@ -26,10 +26,6 @@ class App(QtWidgets.QSystemTrayIcon):
         # Creating the options
         self.menu = QtWidgets.QMenu()
         
-        self.login = QtWidgets.QAction("Login")
-        self.login.triggered.connect(self.openLoginWindow)
-        self.menu.addAction(self.login)
-        
         # To quit the app
         self.quit = QtWidgets.QAction("Quit")
         self.quit.triggered.connect(app.quit)
@@ -39,15 +35,14 @@ class App(QtWidgets.QSystemTrayIcon):
         
         # Create variables
         self.loginWindow = None
-        
-    def openLoginWindow(self):
-        if self.loginWindow == None:
-            self.loginWindow = login.LoginWindow()
-            self.loginWindow.show()
-        else:
-            self.loginWindow.show()
             
     def startConnection(self):
         # Start connection
-        self.connection = connecter.ConnectingWindow()
-        self.connection.show()
+        if self.connection != None:
+            self.connection.close()
+            self.connection == None
+            self.connection = connecter.ConnectingWindow()
+            self.connection.show()
+        else:
+            self.connection = connecter.ConnectingWindow()
+            self.connection.show()
