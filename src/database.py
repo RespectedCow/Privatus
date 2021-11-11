@@ -30,7 +30,7 @@ class Database:
             self.cursor.execute('''CREATE TABLE IF NOT EXISTS users
             (NAME           TEXT    NOT NULL,
             PASSWORD       CHAR(30)    NOT NULL,
-            SYSTEM         TEXT)''')
+            SYSTEM         TEXT);''')
             
             print("User table created.")
         
@@ -41,24 +41,47 @@ class Database:
         '''
         Creates a new user
         '''
-        command = f'''INSERT INTO users (NAME, PASSWORD, SYSTEM) VALUES ({name}, {password}, {systeminfo})'''
+        command = f'''INSERT INTO users (NAME, PASSWORD, SYSTEM) VALUES (?, ? , ?);'''
         print(command)
         
-        self.cursor.execute(command) # Execute
+        self.cursor.execute(command, (name, password, systeminfo)) # Execute
         self.database.commit() # Commit changes
         print(f"User {name} successfully created.")
             
-    def check_if_exist(self, table, key, value):
+    def check_if_exist(self, table, column, value):
         '''
-        Check if table's row has the passed key
+        Check if table's row's columns is the passed value
         '''
         rows = self.database.execute(f"SELECT * FROM {table}")
         
         for row in rows:
-            if row[key] == value:
+            if row[column] == value:
                 return True
             
         return False
+    
+    def check_row_column(self, row, column, value):
+        '''
+        Check if the row's column is the value provided.
+        '''
+        
+        if row[column] == value:
+            return True
+            
+        return False
+    
+    def get_user(self, table, username):
+        '''
+        Gets the user with the provided username
+        '''
+        
+        rows = self.database.execute(f"SELECT * FROM {table}")
+        
+        for row in rows:
+            if row[0] == username:
+                return row
+            
+        return None
     
     def close(self):
         '''

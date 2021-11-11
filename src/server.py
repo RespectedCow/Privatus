@@ -5,6 +5,8 @@ import pickle
 
 # Import scripts
 from src import database
+from src import commander
+from src import commons
 
 # Classes
 class Server:
@@ -22,8 +24,10 @@ class Server:
         self.shouldRun = False
         self.threadCount = 0
         
+        self.onlineUsers = {}
+        
         # Init database
-        self.database = database.Database("Cowmanager")
+        self.database = database.Database("./Cowmanager.sqlite")
         self.database.setup()
         
     def run(self):
@@ -31,7 +35,7 @@ class Server:
         
         while self.shouldRun:
             client, address = self.sock.accept()
-            print("Connection from " + address)
+            print("Connection from " + address[0])
             threading.Thread(target=self.client_thread(client)).start()
             self.threadCount += 1
             
@@ -43,17 +47,38 @@ class Server:
     def client_thread(self, client):
         # Identification
         identification = pickle.loads(client.recv(2048))
+        username = identification['username']
+        password = identification['password']
         
         # Check if returned data is valid
-        if identification['username'] == None or identification['password'] == None:
+        if username == None or password == None:
             client.close()
+            
+        # Init the commander
+        commandIssuer = commander.Commander()
         
-        if self.database.check_if_exist("users", "NAME", identification['username']):
-            print("Client logged in.")
-            success = client.send(pickle.dumps("Success"))
+        if self.database.check_if_exist("users", 0, username) and self.database.check_row_column(self.database.get_user("users", username), 1, password) and commons.check_array(self.onlineUsers, username) == False:
+            print(f"User {username} logged in.")
+            client.send(pickle.dumps("Success"))
+            
+            # Add user to online user list
+            self.onlineUsers[username] = True
             
             while True:
-                message = client.recv(2048)
-                print(pickle.loads(message))
+                try:
+                    client.send(pickle.dumps(commandIssuer.get_command()))
+                except socket.error:
+                    client.close()
+                    self.onlineUsers.remove(username)
+
+                response = pickle.loads(client.recv(2048))
+                if not response:
+                    client.close()
+                    self.onlineUsers.remove(username)
+                    
+        elif self.database.check_if_exist("users", 0, username) and self.database.check_row_column(self.database.get_user("users", username), 1, password) and commons.check_array(self.onlineUsers, username):
+            client.send(pickle.dumps("Same user already logged in."))
+            client.close()
         else:
+            client.send(pickle.dumps("Incorrect"))
             client.close()
