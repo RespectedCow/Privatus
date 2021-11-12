@@ -157,18 +157,23 @@ class ConnectToServer(QtCore.QThread):
                 
             # Main loop
             while True:
-                message = pickle.loads(self.socket.recv(2048))
-                
-                if not message:
-                    self.connectionLost.emit()
-                    time.sleep(2)
-                    self.run()
-                
-                response = sage.get_interpretation()
-                
                 try:
-                    self.socket.send(pickle.dumps(response))
-                except socket.error:
-                    self.connectionLost.emit()
-                    time.sleep(2)
+                    message = pickle.loads(self.socket.recv(2048))
+                    print(message)
+                    
+                    if not message:
+                        self.connectionLost.emit()
+                        time.sleep(2)
+                        self.run()
+                    
+                    response = sage.get_interpretation(message)
+                    
+                    try:
+                        self.socket.send(pickle.dumps(response))
+                    except socket.error:
+                        self.connectionLost.emit()
+                        time.sleep(2)
+                        self.run()
+                except:
+                    self.show.emit()
                     self.run()
