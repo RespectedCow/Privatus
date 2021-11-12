@@ -72,6 +72,7 @@ class Server:
                     self.onlineUsers.remove(username)
 
                 response = pickle.loads(client.recv(2048))
+                print(response)
                 if not response:
                     client.close()
                     self.onlineUsers.remove(username)
