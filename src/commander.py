@@ -10,5 +10,5 @@ class Commander:
         # Declare class variables
         pass
     
-    def get_command(self):
-        return 1
+    def check_status(self, status):
+        return "OK"

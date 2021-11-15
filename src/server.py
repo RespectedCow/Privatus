@@ -27,8 +27,8 @@ class Server:
         self.onlineUsers = {}
         
         # Init database
-        self.database = database.Database("./Cowmanager.sqlite")
-        self.database.setup()
+        self.userDatabase = database.UserDatabase("./Cowmanager.sqlite")
+        self.userDatabase.setup()
         
     def run(self):
         self.shouldRun = True
@@ -57,7 +57,7 @@ class Server:
         # Init the commander
         commandIssuer = commander.Commander()
         
-        if self.database.check_if_exist("users", 0, username) and self.database.check_row_column(self.database.get_user("users", username), 1, password) and commons.check_array(self.onlineUsers, username) == False:
+        if self.userDatabase.check_if_exist("users", 0, username) and self.userDatabase.check_row_column(self.userDatabase.get_user("users", username), 1, password) and commons.check_array(self.onlineUsers, username) == False:
             print(f"User {username} logged in.")
             client.send(pickle.dumps("Success"))
             
@@ -65,19 +65,19 @@ class Server:
             self.onlineUsers[username] = True
             
             while True:
+                status = pickle.loads(client.recv(2048))
+
+                if not status:
+                    client.close()
+                    self.onlineUsers.remove(username)
+                
                 try:
-                    client.send(pickle.dumps(commandIssuer.get_command()))
+                    client.send(pickle.dumps(commandIssuer.check_status(status)))
                 except socket.error:
                     client.close()
                     self.onlineUsers.remove(username)
-
-                response = pickle.loads(client.recv(2048))
-                print(response)
-                if not response:
-                    client.close()
-                    self.onlineUsers.remove(username)
                     
-        elif self.database.check_if_exist("users", 0, username) and self.database.check_row_column(self.database.get_user("users", username), 1, password) and commons.check_array(self.onlineUsers, username):
+        elif self.userDatabase.check_if_exist("users", 0, username) and self.userDatabase.check_row_column(self.userDatabase.get_user("users", username), 1, password) and commons.check_array(self.onlineUsers, username):
             client.send(pickle.dumps("Same user already logged in."))
             client.close()
         else:

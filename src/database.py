@@ -3,7 +3,7 @@ import sqlite3
 import json
 
 # Classes
-class Database:
+class UserDatabase:
     
     def __init__(self, database):
         self.database = sqlite3.connect(database)
@@ -88,3 +88,9 @@ class Database:
         Closes the database
         '''
         self.database.close() # Close the database
+        
+        
+class DiaryDatabase:
+    
+    def __init__(self):
+        pass
