@@ -27,6 +27,7 @@ def main():
         retval = msg.exec_()
 
     app.setQuitOnLastWindowClosed(False)
+    app.setStyle("Windows")
     window = maingui.App(app)
     sys.exit(app.exec_())
     

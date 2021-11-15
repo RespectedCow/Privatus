@@ -15,6 +15,7 @@ class ConnectingWindow(QtWidgets.QMainWindow):
     messageReceived = QtCore.pyqtSignal(str)
     connectionLost = QtCore.pyqtSignal()
     connected = QtCore.pyqtSignal()
+    appClose = QtCore.pyqtSignal()
     
     def __init__(self):
         QtWidgets.QMainWindow.__init__(self)
@@ -59,9 +60,11 @@ class ConnectingWindow(QtWidgets.QMainWindow):
         if self.loginWindow == None:
             self.loginWindow = login.LoginWindow()
             self.loginWindow.logEvent.connect(self.loggedIn)
+            self.loginWindow.appClose.connect(self.appClose.emit)
             self.loginWindow.show()
         else:
             self.loginWindow.logEvent.connect(self.loggedIn)
+            self.loginWindow.appClose.connect(self.appClose.emit)
             self.loginWindow.show()
             
     def loggedIn(self):
@@ -85,6 +88,8 @@ class ConnectToServer(QtCore.QThread):
         
         self.server = "192.168.0.165"
         self.port = 3333
+        
+        self.isConnected = False
         
     def reconnect(self):
         time.sleep(3)
@@ -146,34 +151,21 @@ class ConnectToServer(QtCore.QThread):
                 self.setLabel.emit("Connected")
                 time.sleep(1)
                 self.hide.emit()
+                
+                self.isConnected = True
             else:
                 self.setLabel.emit("Incorrect username or password")
                 time.sleep(1)
                 self.hide.emit()
                 self.createLoginWindow.emit()
                 
-            # Init interpreter
-            sage = interpreter.Interpreter()
-                
-            # Main loop
-            while True:
-                try:
-                    message = pickle.loads(self.socket.recv(2048))
-                    print(message)
-                    
-                    if not message:
-                        self.connectionLost.emit()
-                        time.sleep(2)
-                        self.run()
-                    
-                    response = sage.get_interpretation(message)
-                    
-                    try:
-                        self.socket.send(pickle.dumps(response))
-                    except socket.error:
-                        self.connectionLost.emit()
-                        time.sleep(2)
-                        self.run()
-                except:
-                    self.show.emit()
-                    self.run()
+    def sendInput(self, input):
+        if self.isConnected:
+            try:
+                self.socket.send(pickle.dumps(input))
+
+                response = pickle.loads(self.socket.recv(2048))
+                print(response)
+            except:
+                self.show.emit()
+                self.run()

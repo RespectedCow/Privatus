@@ -7,5 +7,7 @@ class Interpreter:
     def __init__(self):
         pass
     
-    def get_interpretation(self, message):
-        return "LOL"
+    def get_status(self):
+        return {
+            'Systems': "OK"
+        }

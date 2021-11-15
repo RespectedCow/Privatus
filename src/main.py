@@ -5,15 +5,17 @@ from PyQt5 import QtWidgets, QtCore, QtGui
 from src import login
 from src import connecter
 
+# Other windows
+class createProjectApp(QtWidgets.QMainWindow):
+    
+    def __init__(self):
+        pass
+
 # Main
 class App(QtWidgets.QSystemTrayIcon):
     
     def __init__(self, app):
         QtWidgets.QSystemTrayIcon.__init__(self)
-        
-        # Start connection
-        self.connection = connecter.ConnectingWindow()
-        self.connection.show()
         
         # Adding an icon
         icon = QtGui.QIcon()
@@ -23,10 +25,18 @@ class App(QtWidgets.QSystemTrayIcon):
         # Adding item on the menu bar
         self.setVisible(True)
         
+        # Load connecter
+        self.connection = connecter.ConnectingWindow()
+        self.connection.appClose.connect(app.quit)
+        self.connection.show()
+        
         # Creating the options
         self.menu = QtWidgets.QMenu()
         
-        # To quit the app
+        self.createProject = QtWidgets.QAction("Create project")
+        self.createProject.triggered.connect(self.createProjectFunc)
+        self.menu.addAction(self.createProject)
+        
         self.quit = QtWidgets.QAction("Quit")
         self.quit.triggered.connect(app.quit)
         self.menu.addAction(self.quit)
@@ -35,6 +45,9 @@ class App(QtWidgets.QSystemTrayIcon):
         
         # Create variables
         self.loginWindow = None
+        
+    def createProjectFunc(self):
+        pass
             
     def startConnection(self):
         # Start connection
