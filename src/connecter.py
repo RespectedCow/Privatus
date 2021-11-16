@@ -32,12 +32,14 @@ class ConnectingWindow(QtWidgets.QMainWindow):
         
         # Class variables
         self.loginWindow = login.LoginWindow()
+        self.isConnected = False
         
         # Start Thread
         self.connection = ConnectToServer()
         
         # Connect to signals
         self.connection.setProgress.connect(self.progressBar.setValue)
+        self.connection.connected.connect(self.connected)
         self.connection.finishedProgress.connect(self.hide)
         self.connection.connectionLost.connect(self.connectionRefused)
         self.connection.createLoginWindow.connect(self.login)
@@ -56,6 +58,8 @@ class ConnectingWindow(QtWidgets.QMainWindow):
         else:
             self.label.setText("Unexplained error.")     
             
+        self.isConnected = False
+            
     def login(self):
         if self.loginWindow == None:
             self.loginWindow = login.LoginWindow()
@@ -70,6 +74,13 @@ class ConnectingWindow(QtWidgets.QMainWindow):
     def loggedIn(self):
         self.loginWindow.hide()
         self.connection.start()
+        
+    def connected(self):
+        self.isConnected = True
+        
+    def close(self):
+        self.isConnected = False
+        self.connection.close()
         
         
 class ConnectToServer(QtCore.QThread):
@@ -152,12 +163,16 @@ class ConnectToServer(QtCore.QThread):
                 time.sleep(1)
                 self.hide.emit()
                 
+                self.connected.emit()
                 self.isConnected = True
             else:
-                self.setLabel.emit("Incorrect username or password")
+                self.setLabel.emit(results)
                 time.sleep(1)
                 self.hide.emit()
                 self.createLoginWindow.emit()
+                
+    def close(self):
+        self.socket.close()
                 
     def sendInput(self, input):
         if self.isConnected:
