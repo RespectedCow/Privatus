@@ -27,7 +27,7 @@ class Server:
         self.onlineUsers = {}
         
         # Init database
-        self.userDatabase = database.UserDatabase("./Cowmanager.sqlite")
+        self.userDatabase = database.UserDatabase("./userdatabase.sqlite")
         self.userDatabase.setup()
         
     def run(self):
@@ -52,12 +52,13 @@ class Server:
         
         # Check if returned data is valid
         if username == None or password == None:
+            client.send(pickle.dumps("Incorrect"))
             client.close()
             
         # Init the commander
         commandIssuer = commander.Commander()
         
-        if self.userDatabase.check_if_exist("users", 0, username) and self.userDatabase.check_row_column(self.userDatabase.get_user("users", username), 1, password) and commons.check_array(self.onlineUsers, username) == False:
+        if self.userDatabase.check_if_exist("users", 0, username) and self.userDatabase.check_row_column(self.userDatabase.get_user("users", username), 1, password) and commons.check_dict(self.onlineUsers, username, True) == False:
             print(f"User {username} logged in.")
             client.send(pickle.dumps("Success"))
             
@@ -65,21 +66,25 @@ class Server:
             self.onlineUsers[username] = True
             
             while True:
-                status = pickle.loads(client.recv(2048))
-
-                if not status:
-                    client.close()
-                    self.onlineUsers.remove(username)
-                
                 try:
-                    client.send(pickle.dumps(commandIssuer.check_status(status)))
-                except socket.error:
-                    client.close()
-                    self.onlineUsers.remove(username)
+                    status = pickle.loads(client.recv(2048))
                     
-        elif self.userDatabase.check_if_exist("users", 0, username) and self.userDatabase.check_row_column(self.userDatabase.get_user("users", username), 1, password) and commons.check_array(self.onlineUsers, username):
+                    try:
+                        client.send(pickle.dumps(commandIssuer.check_status(status)))
+                    except socket.error:
+                        print(f"User {username} disconnected.")
+                        client.close()
+                        self.onlineUsers.pop(username)
+                        break                 
+                except:
+                    print(f"User {username} disconnected.")
+                    client.close()
+                    self.onlineUsers.pop(username)
+                    break
+                    
+        elif self.userDatabase.check_if_exist("users", 0, username) and self.userDatabase.check_row_column(self.userDatabase.get_user("users", username), 1, password) and commons.check_dict(self.onlineUsers, username, True):
             client.send(pickle.dumps("Same user already logged in."))
             client.close()
         else:
-            client.send(pickle.dumps("Incorrect"))
+            client.send(pickle.dumps("Incorrect username or password."))
             client.close()
