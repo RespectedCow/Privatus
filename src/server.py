@@ -27,8 +27,11 @@ class Server:
         self.onlineUsers = {}
         
         # Init database
-        self.userDatabase = database.UserDatabase("./userdatabase.sqlite")
-        self.userDatabase.setup()
+        self.database = database.UserDatabase("./database.sqlite")
+        self.database.setup()
+        
+        # Entry
+        self.database.create_user("ADMIN", "notsogood123321", True)
         
     def run(self):
         self.shouldRun = True
@@ -58,7 +61,7 @@ class Server:
         # Init the commander
         commandIssuer = commander.Commander()
         
-        if self.userDatabase.check_if_exist("users", 0, username) and self.userDatabase.check_row_column(self.userDatabase.get_user("users", username), 1, password) and commons.check_dict(self.onlineUsers, username, True) == False:
+        if self.database.check_if_exist("users", 0, username) and self.database.check_row_column(self.database.get_user("users", username), 1, password) and commons.check_dict(self.onlineUsers, username, True) == False:
             print(f"User {username} logged in.")
             client.send(pickle.dumps("Success"))
             
@@ -82,7 +85,7 @@ class Server:
                     self.onlineUsers.pop(username)
                     break
                     
-        elif self.userDatabase.check_if_exist("users", 0, username) and self.userDatabase.check_row_column(self.userDatabase.get_user("users", username), 1, password) and commons.check_dict(self.onlineUsers, username, True):
+        elif self.database.check_if_exist("users", 0, username) and self.database.check_row_column(self.database.get_user("users", username), 1, password) and commons.check_dict(self.onlineUsers, username, True):
             client.send(pickle.dumps("Same user already logged in."))
             client.close()
         else:

@@ -1,6 +1,5 @@
 # Import libraries
-import sqlite3
-import json
+import sqlite3, datetime
 
 # Classes
 class UserDatabase:
@@ -29,25 +28,59 @@ class UserDatabase:
             # Create the table
             self.cursor.execute('''CREATE TABLE IF NOT EXISTS users
             (NAME           TEXT    NOT NULL,
-            PASSWORD       CHAR(30)    NOT NULL,
-            SYSTEM         TEXT);''')
+            PASSWORD       TEXT    NOT NULL,
+            isAdmin        BOOLEAN  NOT NULL,
+            DATETIME         TEXT);''')
             
             print("User table created.")
+            
+        # Entry table
+        self.cursor.execute(''' SELECT count(name) FROM sqlite_master WHERE type='table' AND name='entry' ''')
+        
+        if self.cursor.fetchone()[0] == 1 :
+            print("Entry table exists.")
+        else: 
+            print("Entry table does not exists! Creating one now.")
+            
+            # Create the table
+            self.cursor.execute('''CREATE TABLE IF NOT EXISTS entry
+            (OWNER           TEXT    NOT NULL,
+            TITLE       TEXT    NOT NULL,
+            BODY         TEXT NOT NULL,
+            DATETIME       TEXT     NOT NULL);''')
+            
+            print("Entry table created.")
         
         self.database.commit()
         print("Changes commited.")
         
-    def create_user(self, name, password, systeminfo):
+    def create_user(self, name, password ,isadmin):
         '''
         Creates a new user
         '''
-        command = f'''INSERT INTO users (NAME, PASSWORD, SYSTEM) VALUES (?, ? , ?);'''
+        command = f'''INSERT INTO users (NAME, PASSWORD, DATETIME, isAdmin) VALUES (?, ? , ?, ?);'''
         print(command)
         
-        self.cursor.execute(command, (name, password, systeminfo)) # Execute
+        self.cursor.execute(command, (name, password, datetime.datetime.now(), isadmin)) # Execute
         self.database.commit() # Commit changes
         print(f"User {name} successfully created.")
-            
+    
+    def create_entry(self, user, title, body):
+        # Check if user is an existing user
+        if self.get_user("users", user) == None: # If user does not exist
+            return 0
+        
+        # Get the current time
+        time = datetime.datetime.now()
+        
+        # Insert the entry
+        command = f'''INSERT INTO entry (OWNER, TITLE, BODY, DATETIME) VALUES (?, ? , ?, ?);'''
+        print(command)
+        
+        self.cursor.execute(command, (user, title, body, time)) # Execute
+        self.database.commit() # Commit changes
+        print(f"Entry successfully created.")
+        
     def check_if_exist(self, table, column, value):
         '''
         Check if table's row's columns is the passed value
@@ -88,9 +121,3 @@ class UserDatabase:
         Closes the database
         '''
         self.database.close() # Close the database
-        
-        
-class DiaryDatabase:
-    
-    def __init__(self):
-        pass
