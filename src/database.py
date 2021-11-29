@@ -81,6 +81,8 @@ class UserDatabase:
         self.database.commit() # Commit changes
         print(f"Entry successfully created.")
         
+        return "Success"
+        
     def check_if_exist(self, table, column, value):
         '''
         Check if table's row's columns is the passed value
@@ -102,6 +104,23 @@ class UserDatabase:
             return True
             
         return False
+    
+    def get_diary(self, searchterm):
+        '''
+        Return a list of entries with the search term in it's title
+        '''
+        
+        rows = self.database.execute(f"SELECT * FROM diary")
+        return_results = []
+        
+        for row in rows:
+            title = row[1].lower()
+            
+            if searchterm in title:
+                return_results.append[row]
+                
+        return return_results
+        
     
     def get_user(self, table, username):
         '''

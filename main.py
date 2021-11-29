@@ -1,6 +1,5 @@
 # Importing libraries
 import socket
-
 # Import scripts
 from src import server
 

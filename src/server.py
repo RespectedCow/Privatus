@@ -30,9 +30,6 @@ class Server:
         self.database = database.UserDatabase("./database.sqlite")
         self.database.setup()
         
-        # Entry
-        self.database.create_user("ADMIN", "notsogood123321", True)
-        
     def run(self):
         self.shouldRun = True
         
@@ -59,7 +56,7 @@ class Server:
             client.close()
             
         # Init the commander
-        commandIssuer = commander.Commander()
+        commandIssuer = commander.Commander(self.database)
         
         if self.database.check_if_exist("users", 0, username) and self.database.check_row_column(self.database.get_user("users", username), 1, password) and commons.check_dict(self.onlineUsers, username, True) == False:
             print(f"User {username} logged in.")
@@ -70,10 +67,13 @@ class Server:
             
             while True:
                 try:
-                    status = pickle.loads(client.recv(2048))
+                    message = pickle.loads(client.recv(2048))
+                    print(message)
                     
                     try:
-                        client.send(pickle.dumps(commandIssuer.check_status(status)))
+                        return_message = self.check_message(message, username)
+                        print(return_message)
+                        client.send(pickle.dumps(return_message))
                     except socket.error:
                         print(f"User {username} disconnected.")
                         client.close()
@@ -91,3 +91,31 @@ class Server:
         else:
             client.send(pickle.dumps("Incorrect username or password."))
             client.close()
+            
+    def check_message(self, message, user):
+        '''
+        Filters passed parameters and executes actions based on parameters given.
+        
+        Status codes:
+        0 for OK
+        1 for Error
+        '''
+        
+        # Check if valid format
+        if message['status'] == 0:
+            message = message['message'] # Reassign it to make it make more sense
+            
+            if message['action'] == "createEntry":
+                # Filter message param
+                if not 'title' in message or not 'content' in message:
+                    return "Invalid entry format."
+
+                if type(message['title']) != str or type(message['content']) != str:
+                    return "Invalid types"
+                
+                # Create the entry
+                self.database.create_entry(user, message['title'], message['content'])
+                return "Entry created successfully"
+            
+            
+        return "Unknown status code"
