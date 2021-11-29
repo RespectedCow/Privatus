@@ -55,6 +55,8 @@ class ConnectingWindow(QtWidgets.QMainWindow):
             self.label.setText("Connection refused. Server might be down.")
         elif int == 2:
             self.label.setText("You may not be connected to the internet.")
+        elif int == 3:
+            self.label.setText("Connected reset.")
         else:
             self.label.setText("Unexplained error.")     
             
@@ -147,7 +149,7 @@ class ConnectToServer(QtCore.QThread):
             # If successfully connected, send identification
             username = loginCres['username'] # Get it
             password = loginCres['password']
-
+            
             self.socket.send(pickle.dumps({
                 'username': username,
                 'password': password
@@ -175,8 +177,22 @@ class ConnectToServer(QtCore.QThread):
         self.socket.close()
                 
     def sendInput(self, input):
+        '''
+        Valid input format:
+        input = {
+            'status': 'OK',
+            'message': input
+        }
+        '''
+        
+        input = {
+            'status': 0,
+            'message': input
+        }
+        
         if self.isConnected:
             try:
+                print(input)
                 self.socket.send(pickle.dumps(input))
 
                 response = pickle.loads(self.socket.recv(2048))

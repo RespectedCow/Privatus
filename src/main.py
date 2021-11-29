@@ -6,12 +6,9 @@ import io
 # Import scripts
 from src import login
 from src import connecter
+from src import diary
 
 # Other windows
-class createProjectApp(QtWidgets.QMainWindow):
-    
-    def __init__(self):
-        pass
 
 # Main
 class App(QtWidgets.QSystemTrayIcon):
@@ -37,9 +34,9 @@ class App(QtWidgets.QSystemTrayIcon):
         
         self.featuresmenu = QtWidgets.QMenu("Features")
         
-        self.createProject = QtWidgets.QAction("Create new dairy/entry")
-        self.createProject.triggered.connect(self.createProjectFunc)
-        self.featuresmenu.addAction(self.createProject)
+        self.createDiary = QtWidgets.QAction("Create new diary/entry")
+        self.createDiary.triggered.connect(self.diaryFunc)
+        self.featuresmenu.addAction(self.createDiary)
         self.menu.addMenu(self.featuresmenu)
         self.menu.addSeparator()
 
@@ -55,10 +52,32 @@ class App(QtWidgets.QSystemTrayIcon):
         
         # Create variables
         self.loginWindow = None
+        self.diaryWindow = None
         self.app = app
         
-    def createProjectFunc(self):
-        pass
+    def diaryFunc(self):
+        if self.diaryWindow == None and self.connection.isConnected:
+            self.diaryWindow = diary.Main()
+            self.diaryWindow.createEntryEvent.connect(self.createEntryFunc)
+            self.diaryWindow.show()
+        elif self.connection.isConnected:
+            self.diaryWindow.show()
+        else:
+            print("You are not connected to the server")
+            msg = QtWidgets.QMessageBox()
+            msg.setIcon(QtWidgets.QMessageBox.Information)
+            msg.setWindowIcon(self.icon)
+            msg.setText("You are not connected to the server")
+            msg.setWindowTitle("Not connected")
+            
+            msg.exec_()
+            
+    def createEntryFunc(self, title, content):
+        # Send the title and content to the server
+        self.connection.connection.sendInput({
+            'action': 'createEntry',
+            'title': title,
+            'content': content})
     
     def logout(self):
         # Check if connection exists
