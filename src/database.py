@@ -44,7 +44,8 @@ class UserDatabase:
             
             # Create the table
             self.cursor.execute('''CREATE TABLE IF NOT EXISTS entry
-            (OWNER           TEXT    NOT NULL,
+            (ID             INT NOT NULL,
+            OWNER           TEXT    NOT NULL,
             TITLE       TEXT    NOT NULL,
             BODY         TEXT NOT NULL,
             DATETIME       TEXT     NOT NULL);''')
@@ -77,7 +78,7 @@ class UserDatabase:
             return 0
         
         # Insert the entry
-        command = f'''INSERT INTO entry (OWNER, TITLE, BODY, DATETIME) VALUES (?, ? , ?, ?);'''
+        command = f'''INSERT INTO entry (ID, OWNER, TITLE, BODY, DATETIME) VALUES (?, ?, ? , ?, ?);'''
         print(command)
         
         # Get the datetime
@@ -86,7 +87,10 @@ class UserDatabase:
         # This is going to remove the milliseconds
         time = dt.replace(microsecond=0)
         
-        self.cursor.execute(command, (user, title, body, time)) # Execute
+        # Get id
+        id = self.get_user_total_entries(user) + 1
+        
+        self.cursor.execute(command, (id, user, title, body, time)) # Execute
         self.database.commit() # Commit changes
         print(f"Entry successfully created.")
         
@@ -123,7 +127,7 @@ class UserDatabase:
         return_results = []
         
         for row in rows:
-            title = row[1].lower()
+            title = row[2].lower()
             
             if searchterm in title:
                 return_results.append[row]
@@ -132,13 +136,13 @@ class UserDatabase:
     
     def get_entries(self, username):
         '''
-        Gets the entries that the user owns
+        Gets the entries that the user created.
         '''
         rows = self.database.execute(f"SELECT * FROM entry")
         return_results = []
         
         for row in rows:
-            if row[0] == username:
+            if row[1] == username:
                 return_results.append(row)
                 
         return return_results
@@ -155,6 +159,19 @@ class UserDatabase:
                 return row
             
         return None
+    
+    def get_user_total_entries(self, username):
+        '''
+        Gets the total entries that the user has
+        '''
+        rows = self.database.execute(f"SELECT * FROM entry")
+        results = 0
+        
+        for row in rows:
+            if row[1] == username:
+                results += 1
+                
+        return results
     
     def close(self):
         '''
