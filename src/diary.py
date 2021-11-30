@@ -1,6 +1,6 @@
 # Importing libraries
 from PyQt5 import QtWidgets, QtCore, QtGui, uic
-
+from datetime import datetime
 # Classes
 class createEntry(QtWidgets.QMainWindow):
     
@@ -31,10 +31,13 @@ class createEntry(QtWidgets.QMainWindow):
             QtWidgets.QMessageBox.warning(self, "Error!", "You cannot create an entry with an empty title or body", QtWidgets.QMessageBox.Ok)
             
             return
-        
-        print(title)
-        print(content)
+
         self.createEntryEvent.emit(title, content)
+        self.close()
+        
+    def resetFields(self):
+        self.titleEdit.setText("")
+        self.contentEdit.setText("")
 
 class Main(QtWidgets.QMainWindow):
     
@@ -59,10 +62,22 @@ class Main(QtWidgets.QMainWindow):
         # Set triggers
         self.newEntry.clicked.connect(self.createEntry)
         
+    def loadEntries(self, entries):
+        # Clear the tree widget
+        self.entriesWidget.clear()
+
+        # Load the entries
+        sortedEntries = sorted(entries, key=lambda t: datetime.strptime(t[3], '%Y-%m-%d %H:%M:%S'))
+        
+        for entry in sortedEntries:
+            newEntry = QtWidgets.QTreeWidgetItem(self.entriesWidget, [entry[3], entry[1]])
+        
     def createEntry(self):
         if self.createEntryWindow == None:
             self.createEntryWindow = createEntry()
             self.createEntryWindow.createEntryEvent.connect(self.createEntryEvent.emit)
+            self.createEntryWindow.resetFields()
             self.createEntryWindow.show()
         else:
+            self.createEntryWindow.resetFields()
             self.createEntryWindow.show()

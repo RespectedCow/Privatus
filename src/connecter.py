@@ -8,7 +8,6 @@ from PyQt5 import QtWidgets, QtGui, QtCore, uic
 
 # Scripts
 from src import login
-from src import interpreter
 
 # Classes
 class ConnectingWindow(QtWidgets.QMainWindow):
@@ -176,18 +175,24 @@ class ConnectToServer(QtCore.QThread):
     def close(self):
         self.socket.close()
                 
-    def sendInput(self, input):
+    def sendInput(self, action, params):
         '''
-        Valid input format:
+        Format:\n
         input = {
-            'status': 'OK',
-            'message': input
+            'status': 0,
+            'message': {
+                'action': action,
+                'params': params
+            }
         }
         '''
         
         input = {
             'status': 0,
-            'message': input
+            'message': {
+                'action': action,
+                'params': params
+            }
         }
         
         if self.isConnected:
@@ -197,6 +202,7 @@ class ConnectToServer(QtCore.QThread):
 
                 response = pickle.loads(self.socket.recv(2048))
                 print(response)
+                return response
             except:
                 self.show.emit()
                 self.run()

@@ -58,9 +58,11 @@ class App(QtWidgets.QSystemTrayIcon):
     def diaryFunc(self):
         if self.diaryWindow == None and self.connection.isConnected:
             self.diaryWindow = diary.Main()
+            self.diaryWindow.loadEntries(self.connection.connection.sendInput('getEntries',{}))
             self.diaryWindow.createEntryEvent.connect(self.createEntryFunc)
             self.diaryWindow.show()
         elif self.connection.isConnected:
+            self.diaryWindow.loadEntries(self.connection.connection.sendInput('getEntries',{}))
             self.diaryWindow.show()
         else:
             print("You are not connected to the server")
@@ -74,10 +76,12 @@ class App(QtWidgets.QSystemTrayIcon):
             
     def createEntryFunc(self, title, content):
         # Send the title and content to the server
-        self.connection.connection.sendInput({
-            'action': 'createEntry',
+        self.connection.connection.sendInput("createEntry", {
             'title': title,
-            'content': content})
+            'content': content
+        })
+        
+        self.diaryWindow.loadEntries(self.connection.connection.sendInput('getEntries', {}))
     
     def logout(self):
         # Check if connection exists
