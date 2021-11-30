@@ -61,7 +61,13 @@ class UserDatabase:
         command = f'''INSERT INTO users (NAME, PASSWORD, DATETIME, isAdmin) VALUES (?, ? , ?, ?);'''
         print(command)
         
-        self.cursor.execute(command, (name, password, datetime.datetime.now(), isadmin)) # Execute
+        # Get the datetime
+        dt = datetime.datetime.now()
+        
+        # This is going to remove the milliseconds
+        x = dt.replace(microsecond=0)
+        
+        self.cursor.execute(command, (name, password, x, isadmin)) # Execute
         self.database.commit() # Commit changes
         print(f"User {name} successfully created.")
     
@@ -70,12 +76,15 @@ class UserDatabase:
         if self.get_user("users", user) == None: # If user does not exist
             return 0
         
-        # Get the current time
-        time = datetime.datetime.now()
-        
         # Insert the entry
         command = f'''INSERT INTO entry (OWNER, TITLE, BODY, DATETIME) VALUES (?, ? , ?, ?);'''
         print(command)
+        
+        # Get the datetime
+        dt = datetime.datetime.now()
+        
+        # This is going to remove the milliseconds
+        time = dt.replace(microsecond=0)
         
         self.cursor.execute(command, (user, title, body, time)) # Execute
         self.database.commit() # Commit changes
@@ -105,12 +114,12 @@ class UserDatabase:
             
         return False
     
-    def get_diary(self, searchterm):
+    def search_entries(self, searchterm):
         '''
         Return a list of entries with the search term in it's title
         '''
         
-        rows = self.database.execute(f"SELECT * FROM diary")
+        rows = self.database.execute("SELECT * FROM entry")
         return_results = []
         
         for row in rows:
@@ -120,7 +129,19 @@ class UserDatabase:
                 return_results.append[row]
                 
         return return_results
+    
+    def get_entries(self, username):
+        '''
+        Gets the entries that the user owns
+        '''
+        rows = self.database.execute(f"SELECT * FROM entry")
+        return_results = []
         
+        for row in rows:
+            if row[0] == username:
+                return_results.append(row)
+                
+        return return_results
     
     def get_user(self, table, username):
         '''
