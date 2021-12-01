@@ -177,7 +177,7 @@ class ConnectToServer(QtCore.QThread):
                 
     def sendInput(self, action, params):
         '''
-        Format:\n
+        Format:
         input = {
             'status': 0,
             'message': {

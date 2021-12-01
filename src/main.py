@@ -60,6 +60,7 @@ class App(QtWidgets.QSystemTrayIcon):
             self.diaryWindow = diary.Main()
             self.diaryWindow.loadEntries(self.connection.connection.sendInput('getEntries',{}))
             self.diaryWindow.createEntryEvent.connect(self.createEntryFunc)
+            self.diaryWindow.destroyEntryEvent.connect(self.destroyEntry)
             self.diaryWindow.show()
         elif self.connection.isConnected:
             self.diaryWindow.loadEntries(self.connection.connection.sendInput('getEntries',{}))
@@ -79,6 +80,13 @@ class App(QtWidgets.QSystemTrayIcon):
         self.connection.connection.sendInput("createEntry", {
             'title': title,
             'content': content
+        })
+        
+        self.diaryWindow.loadEntries(self.connection.connection.sendInput('getEntries', {}))
+        
+    def destroyEntry(self, id):
+        self.connection.connection.sendInput('deleteEntry', {
+            'id': id
         })
         
         self.diaryWindow.loadEntries(self.connection.connection.sendInput('getEntries', {}))
