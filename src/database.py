@@ -1,5 +1,6 @@
 # Import libraries
 import sqlite3, datetime
+from typing import TYPE_CHECKING
 
 # Classes
 class UserDatabase:
@@ -172,6 +173,26 @@ class UserDatabase:
                 results += 1
                 
         return results
+    
+    def destroyEntry(self, id, user):
+        '''
+        Destroys the entries with the given id
+        '''
+    
+        self.database.execute(f"DELETE from entry WHERE ID={id}")
+        print(f"DELETE from entry WHERE ID={id}")
+        
+        # Update entries above the current id
+        rows = self.database.execute(f"SELECT * FROM entry")
+
+        for row in rows:
+            
+            if row[0] > id and row[1] == user:
+                rowid = row[0]
+                self.database.execute(f'UPDATE entry SET ID = ?, OWNER = ?, TITLE = ?, BODY = ?, DATETIME = ? WHERE ID = {rowid}', (rowid - 1, row[1], row[2], row[3], row[4]))
+        
+        self.database.commit()
+        return "Successful"
     
     def close(self):
         '''
