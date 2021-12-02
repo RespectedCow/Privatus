@@ -4,11 +4,17 @@ from datetime import datetime
 # Classes
 class showEntry(QtWidgets.QMainWindow):
     
-    def __init__(self, title, body, datetime):
+    def __init__(self, entry):
         QtWidgets.QMainWindow.__init__(self)
         
         # Load the ui
         uic.loadUi('./lib/uis/showEntry.ui', self)
+        self.loadValues(entry)
+        
+    def loadValues(self, entry):
+        self.titleLabel.setText(entry[2])
+        self.creationLabel.setText(entry[4])
+        self.content.setText(entry[3])
 
 
 class createEntry(QtWidgets.QMainWindow):
@@ -54,6 +60,7 @@ class Main(QtWidgets.QMainWindow):
     createEntryEvent = QtCore.pyqtSignal(str, str)
     destroyEntryEvent = QtCore.pyqtSignal(int)
     searchEntriesEvent = QtCore.pyqtSignal(str)
+    showEntryEvent = QtCore.pyqtSignal(int)
     
     def __init__(self):
         QtWidgets.QMainWindow.__init__(self)
@@ -77,6 +84,7 @@ class Main(QtWidgets.QMainWindow):
         self.newEntry.clicked.connect(self.createEntry)
         self.deleteButton.clicked.connect(self.destroyEntry)
         self.searchButton.clicked.connect(self.searchEntries)
+        self.showButton.clicked.connect(self.showEntryBroadcast)
         
     def searchEntries(self):
         self.searchEntriesEvent.emit(self.searchBar.text())
@@ -85,13 +93,7 @@ class Main(QtWidgets.QMainWindow):
         currentItem = self.entriesWidget.currentItem()
         
         if currentItem == None:
-            msg = QtWidgets.QMessageBox()
-            msg.setIcon(QtWidgets.QMessageBox.warning)
-            msg.setWindowIcon(self.icon)
-            msg.setText("You have not selected an entry")
-            msg.setWindowTitle("Error!")
-                
-            retval = msg.exec_()
+            QtWidgets.QMessageBox.warning(self, "Error!", "You have not selected an entry", QtWidgets.QMessageBox.Ok)
             
             return
         
@@ -115,17 +117,11 @@ class Main(QtWidgets.QMainWindow):
             self.entries[entry[0]] = (entry[2], entry[4])
             newEntry = QtWidgets.QTreeWidgetItem(self.entriesWidget, [entry[4], entry[2]])
             
-    def showEntry(self):
+    def showEntryBroadcast(self):
         currentItem = self.entriesWidget.currentItem()
         
         if currentItem == None:
-            msg = QtWidgets.QMessageBox()
-            msg.setIcon(QtWidgets.QMessageBox.warning)
-            msg.setWindowIcon(self.icon)
-            msg.setText("You have not selected an entry")
-            msg.setWindowTitle("Error!")
-                
-            retval = msg.exec_()
+            QtWidgets.QMessageBox.warning(self, "Error!", "You have not selected an entry", QtWidgets.QMessageBox.Ok)
             
             return
         
@@ -135,10 +131,11 @@ class Main(QtWidgets.QMainWindow):
         results = findEntry(self.entries, title, datetime)
         
         if results != None:
-            # Create the window
-            if self.showEntryWindow == None:
-                # self.showEntryWindow = showEntry(self.entries[results])     
-                pass 
+            self.showEntryEvent.emit(results)
+            
+    def show_entry(self, entry):
+        self.showEntryWindow = showEntry(entry)
+        self.showEntryWindow.show()
         
     def createEntry(self):
         if self.createEntryWindow == None:
