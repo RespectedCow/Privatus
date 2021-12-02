@@ -61,6 +61,7 @@ class App(QtWidgets.QSystemTrayIcon):
             self.diaryWindow.loadEntries(self.connection.connection.sendInput('getEntries',{}))
             self.diaryWindow.createEntryEvent.connect(self.createEntryFunc)
             self.diaryWindow.destroyEntryEvent.connect(self.destroyEntry)
+            self.diaryWindow.searchEntriesEvent.connect(self.searchEntries)
             self.diaryWindow.show()
         elif self.connection.isConnected:
             self.diaryWindow.loadEntries(self.connection.connection.sendInput('getEntries',{}))
@@ -83,6 +84,11 @@ class App(QtWidgets.QSystemTrayIcon):
         })
         
         self.diaryWindow.loadEntries(self.connection.connection.sendInput('getEntries', {}))
+        
+    def searchEntries(self, term):
+        self.diaryWindow.loadEntries(self.connection.connection.sendInput("searchEntries", {'searchterm': term}))
+        
+        return
         
     def destroyEntry(self, id):
         self.connection.connection.sendInput('deleteEntry', {

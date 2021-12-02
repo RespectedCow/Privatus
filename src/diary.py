@@ -2,6 +2,15 @@
 from PyQt5 import QtWidgets, QtCore, QtGui, uic
 from datetime import datetime
 # Classes
+class showEntry(QtWidgets.QMainWindow):
+    
+    def __init__(self, title, body, datetime):
+        QtWidgets.QMainWindow.__init__(self)
+        
+        # Load the ui
+        uic.loadUi('./lib/uis/showEntry.ui', self)
+
+
 class createEntry(QtWidgets.QMainWindow):
     
     createEntryEvent = QtCore.pyqtSignal(str, str)
@@ -39,10 +48,12 @@ class createEntry(QtWidgets.QMainWindow):
         self.titleEdit.setText("")
         self.contentEdit.setText("")
 
+
 class Main(QtWidgets.QMainWindow):
     
     createEntryEvent = QtCore.pyqtSignal(str, str)
     destroyEntryEvent = QtCore.pyqtSignal(int)
+    searchEntriesEvent = QtCore.pyqtSignal(str)
     
     def __init__(self):
         QtWidgets.QMainWindow.__init__(self)
@@ -59,11 +70,16 @@ class Main(QtWidgets.QMainWindow):
         
         # Class variables
         self.createEntryWindow = None
+        self.showEntryWindow = None
         self.entries = {}
         
         # Set triggers
         self.newEntry.clicked.connect(self.createEntry)
         self.deleteButton.clicked.connect(self.destroyEntry)
+        self.searchButton.clicked.connect(self.searchEntries)
+        
+    def searchEntries(self):
+        self.searchEntriesEvent.emit(self.searchBar.text())
         
     def destroyEntry(self):
         currentItem = self.entriesWidget.currentItem()
@@ -93,11 +109,36 @@ class Main(QtWidgets.QMainWindow):
         self.entries.clear()
 
         # Load the entries
-        sortedEntries = sorted(entries, key=lambda t: datetime.strptime(t[4], '%Y-%m-%d %H:%M:%S'))
+        sortedEntries = sorted(entries, key=lambda t: datetime.strptime(t[4], '%Y-%m-%d %H:%M:%S'), reverse=True)
         
         for entry in sortedEntries:
             self.entries[entry[0]] = (entry[2], entry[4])
             newEntry = QtWidgets.QTreeWidgetItem(self.entriesWidget, [entry[4], entry[2]])
+            
+    def showEntry(self):
+        currentItem = self.entriesWidget.currentItem()
+        
+        if currentItem == None:
+            msg = QtWidgets.QMessageBox()
+            msg.setIcon(QtWidgets.QMessageBox.warning)
+            msg.setWindowIcon(self.icon)
+            msg.setText("You have not selected an entry")
+            msg.setWindowTitle("Error!")
+                
+            retval = msg.exec_()
+            
+            return
+        
+        title = currentItem.text(1)
+        datetime = currentItem.text(0)
+        
+        results = findEntry(self.entries, title, datetime)
+        
+        if results != None:
+            # Create the window
+            if self.showEntryWindow == None:
+                # self.showEntryWindow = showEntry(self.entries[results])     
+                pass 
         
     def createEntry(self):
         if self.createEntryWindow == None:
