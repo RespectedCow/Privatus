@@ -60,6 +60,11 @@ class Interpreter:
                     return "Id not given"
                 
                 return self.database.get_entry(params['id'], self.user)
+            if message['action'] == "editEntry":
+                if not 'id' in params or not 'title' in params or not 'content' in params:
+                    return "Required parameter not given"
+                
+                return self.database.edit_entry(params['id'], self.user, params['title'], params['content'])
             
             return "Unknown action given"
         elif message['status'] == 1:

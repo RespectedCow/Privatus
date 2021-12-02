@@ -96,6 +96,21 @@ class UserDatabase:
         print(f"Entry successfully created.")
         
         return "Success"
+    
+    def edit_entry(self, id, user, title, body):
+        '''
+        Makes changes to entry with specified id with the given parameters
+        '''
+        # Get rows
+        rows = self.database.execute(f"SELECT * FROM entry")
+
+        for row in rows:
+            
+            if row[0] == id and row[1] == user:
+                self.database.execute(f'UPDATE entry SET ID = ?, OWNER = ?, TITLE = ?, BODY = ?, DATETIME = ? WHERE ID = {id}', (id, user, title, body, row[4]))
+        
+        self.database.commit()
+        return f"Edited entry id {id}"
         
     def check_if_exist(self, table, column, value):
         '''
