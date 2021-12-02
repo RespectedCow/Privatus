@@ -42,10 +42,10 @@ class Interpreter:
                 return self.database.get_entries(self.user)
             if message['action'] == "searchEntries":
                 # Check if search term is given
-                if 'searchterm' in params == False:
+                if not 'searchterm' in params:
                     return "No search term given."
                 
-                return self.database.search_entries(message['searchterm'])
+                return self.database.search_entries(params['searchterm'], self.user)
             if message['action'] == "deleteEntry":
                 # Check if id is given
                 if not 'id' in params:
@@ -54,6 +54,12 @@ class Interpreter:
                 self.database.destroyEntry(params['id'], self.user)
                 
                 return "Successfuly destroyed entry"
+            if message['action'] == "showEntry":
+                # Check if id is given
+                if not 'id' in params:
+                    return "Id not given"
+                
+                return self.database.get_entry(params['id'], self.user)
             
             return "Unknown action given"
         elif message['status'] == 1:

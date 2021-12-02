@@ -119,7 +119,7 @@ class UserDatabase:
             
         return False
     
-    def search_entries(self, searchterm):
+    def search_entries(self, searchterm, user):
         '''
         Return a list of entries with the search term in it's title
         '''
@@ -130,8 +130,8 @@ class UserDatabase:
         for row in rows:
             title = row[2].lower()
             
-            if searchterm in title:
-                return_results.append[row]
+            if searchterm in title and row[1] == user:
+                return_results.append(row)
                 
         return return_results
     
@@ -147,6 +147,18 @@ class UserDatabase:
                 return_results.append(row)
                 
         return return_results
+    
+    def get_entry(self, id, user):
+        '''
+        Gets the entry with the id provided.
+        '''
+        rows = self.database.execute(f"SELECT * FROM entry")
+        
+        for row in rows:
+            if row[1] == user and row[0] == id:
+                return row
+            
+        return None     
     
     def get_user(self, table, username):
         '''
