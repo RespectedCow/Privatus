@@ -6,6 +6,7 @@ Helps the program connect to the server.
 import socket, time, yaml, pickle
 from PyQt5 import QtWidgets, QtGui, QtCore, uic
 from multiprocessing.connection import Client
+import threading
 
 # Scripts
 from src import login
@@ -176,8 +177,21 @@ class ConnectToServer(QtCore.QThread):
                 self.hide.emit()
                 self.createLoginWindow.emit()
                 
+            threading.Thread(target=self.check_status).start()
+                
     def close(self):
         self.socket.close()
+        
+    def check_status(self):
+        while True:
+            if not self.isConnected:
+                break
+            
+            # Check status
+            response = self.sendInput('checkStatus', {})
+            print(response)
+            
+            time.sleep(5)
                 
     def sendInput(self, action, params):
         '''
@@ -205,7 +219,6 @@ class ConnectToServer(QtCore.QThread):
                 self.socket.send(pickle.dumps(input))
 
                 response = pickle.loads(self.socket.recv())
-                print(response)
                 return response
             except:
                 self.show.emit()
