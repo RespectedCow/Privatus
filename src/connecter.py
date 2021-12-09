@@ -5,6 +5,7 @@ Helps the program connect to the server.
 # Importing libraries
 import socket, time, yaml, pickle
 from PyQt5 import QtWidgets, QtGui, QtCore, uic
+from multiprocessing.connection import Client
 
 # Scripts
 from src import login
@@ -130,20 +131,23 @@ class ConnectToServer(QtCore.QThread):
             self.hide.emit()
             self.createLoginWindow.emit()
         else:
-            self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.socket = None
             
             try:
-                self.socket.connect((self.server, self.port))
+                self.socket = Client((self.server, self.port))
             except ConnectionRefusedError:
                 self.connectionLost.emit(1)
                 
                 self.reconnect()
+                return
             except OSError:
                 self.connectionLost.emit(2)
                 
                 self.reconnect()
+                return
             except:
                 self.reconnect()
+                return
             
             # If successfully connected, send identification
             username = loginCres['username'] # Get it
@@ -155,7 +159,7 @@ class ConnectToServer(QtCore.QThread):
             }))
             
             # Get results
-            results = pickle.loads(self.socket.recv(2048))
+            results = pickle.loads(self.socket.recv())
             print(results)
             
             if results == "Success":
@@ -200,7 +204,7 @@ class ConnectToServer(QtCore.QThread):
                 print(input)
                 self.socket.send(pickle.dumps(input))
 
-                response = pickle.loads(self.socket.recv(2048))
+                response = pickle.loads(self.socket.recv())
                 print(response)
                 return response
             except:
