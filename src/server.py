@@ -1,5 +1,6 @@
 # Import libraries
 import socket
+from multiprocessing.connection import Listener
 import threading
 import pickle
 
@@ -12,10 +13,7 @@ from src import commons
 class Server:
     
     def __init__(self, address, port):
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.bind((address, port))
-        
-        sock.listen(5)
+        sock = Listener((address, port))
         
         # Class variables
         self.address = address
@@ -34,8 +32,7 @@ class Server:
         self.shouldRun = True
         
         while self.shouldRun:
-            client, address = self.sock.accept()
-            print("Connection from " + address[0])
+            client = self.sock.accept()
             threading.Thread(target=self.client_thread(client)).start()
             self.threadCount += 1
             
@@ -46,7 +43,7 @@ class Server:
         
     def client_thread(self, client):
         # Identification
-        identification = pickle.loads(client.recv(2048))
+        identification = pickle.loads(client.recv())
         username = identification['username']
         password = identification['password']
         
@@ -67,7 +64,7 @@ class Server:
             
             while True:
                 try:
-                    message = pickle.loads(client.recv(2048))
+                    message = pickle.loads(client.recv())
                     print(message)
                     
                     try:

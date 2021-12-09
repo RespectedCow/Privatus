@@ -65,6 +65,8 @@ class Interpreter:
                     return "Required parameter not given"
                 
                 return self.database.edit_entry(params['id'], self.user, params['title'], params['content'])
+            if message['action'] == "checkStatus":
+                return "OK"
             
             return "Unknown action given"
         elif message['status'] == 1:
