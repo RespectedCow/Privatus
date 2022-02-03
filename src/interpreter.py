@@ -1,6 +1,10 @@
 # Importing libraries
+import os
+import zlib
+import sys
 
 # Importing scripts
+from src import backupSystem
 
 # Classes
 class Interpreter:
@@ -11,6 +15,9 @@ class Interpreter:
         self.database = database
         self.user = user
         self.connection = connection
+        
+        # Track user commands
+        self.user_session_commands = []
     
     def check_message(self, message):
         '''
@@ -67,6 +74,39 @@ class Interpreter:
                 return self.database.edit_entry(params['id'], self.user, params['title'], params['content'])
             if message['action'] == "checkStatus":
                 return "OK"
+            if message['action'] == "checkBackupStatus":
+                # Get the data
+                usedStorage = backupSystem.getUserUS(self.user)
+            
+            if message['action'] == "backupFile":
+                # Checks
+                if not 'filename' in message['params'] or not 'filesize' in message['params']:
+                    return "Required parameter not given"
+                
+                # Values
+                filename = message['params']['filename']
+                filesize = message['params']['filesize']
+                
+                filename = os.path.basename(filename)
+                # convert to integer
+                filesize = int(filesize)
+                # start receiving the file from the socket
+                with open(filename, "wb") as f:
+                    while True:
+                        # read 1024 bytes from the socket (receive)
+                        bytes_read = self.connection.recv()
+                        if not bytes_read:    
+                            # nothing is received file transmitting is done
+                            break
+                        # write to the file the bytes we just received
+                        f.write(bytes_read)
+                        
+                        # Compress the files
+                        self.compressFile(filename)
+                        
+                        return "Backed up"
+                
+                return "Message error"
             
             return "Unknown action given"
         elif message['status'] == 1:

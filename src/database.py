@@ -3,10 +3,11 @@ import sqlite3, datetime
 from typing import TYPE_CHECKING
 
 # Classes
-class UserDatabase:
+class Database:
     
     def __init__(self, database):
         self.database = sqlite3.connect(database)
+        print("Initializing database.")
         print("Database successfully opened.")
         
         # Get cursor
@@ -54,12 +55,18 @@ class UserDatabase:
             print("Entry table created.")
         
         self.database.commit()
+        print("Done")
         print("Changes commited.")
         
     def create_user(self, name, password ,isadmin):
         '''
         Creates a new user
         '''
+        
+        # Check if user exists
+        if self.check_if_exist("users", "NAME", name):
+            return "User exists! Please select another username"
+        
         command = f'''INSERT INTO users (NAME, PASSWORD, DATETIME, isAdmin) VALUES (?, ? , ?, ?);'''
         print(command)
         
@@ -114,7 +121,7 @@ class UserDatabase:
         
     def check_if_exist(self, table, column, value):
         '''
-        Check if table's row's columns is the passed value
+        Check if table's rows's columns is the passed value
         '''
         rows = self.database.execute(f"SELECT * FROM {table}")
         
