@@ -1,15 +1,45 @@
 # Importing libraries
 import os
+import re
 import shutil
+from tkinter import E
+
+# Importing scripts
+from src import commons
 
 # Functions
-class init():
+class init:
     
     __identifier__ = "server_init"
+    appDataFolder = commons.get_appdatafolder()
     
-    def run():
+    directories = [
+        "logs", "backupFolder"
+    ]
+    
+    def run(self):
         print("Initializing the application")
     
-        # 
+        # Create the app data folder
+        try:
+            os.mkdir(self.appDataFolder)
+        except:
+            pass
         
-        print("Done")
+        for directory in self.directories:
+            path = os.path.join(self.appDataFolder, directory)
+            os.makedirs(path, exist_ok=True)
+        
+        print("Done!")
+        
+    def check_init(self):
+        if os.path.isdir(self.appDataFolder) == False: # check main directory
+            return True
+        
+        # Check if sub directories exists
+        for directory in self.directories:
+            if os.path.isdir(self.appDataFolder + "/" + directory) == False:
+                return True
+        
+        # If they exists
+        return False

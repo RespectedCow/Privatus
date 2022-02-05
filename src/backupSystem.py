@@ -1,6 +1,10 @@
-# Imports
+# Importing libraries
 import zlib
 import sys
+import os
+
+# Importing scripts
+from src import commons
 
 # Variables
 
@@ -33,10 +37,10 @@ def decompressFile(filename):
 class init:
     
     __identifier__ = "backup"
+    appDataFolder = commons.get_appdatafolder()
     
-    def run():
-        print("Initializing backup system")
-    
-        # Check the current os
+    def run(self):
+        pass
         
-        print("Done")
+    def check_init(self):
+        return True

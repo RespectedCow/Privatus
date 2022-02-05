@@ -1,6 +1,7 @@
 # Importing libraries
-import re
+import platform
 import socket
+from tkinter import E, N
 
 # Import scripts
 from src import server
@@ -9,33 +10,31 @@ from src import init
 
 # Variables
 init_functions = [
-    backupSystem.init,
-    init.init
+    init.init,
+    backupSystem.init
 ]
 
 valid_os = [
     "Windows",
-    "Linux",
-    "Raspbian"
+    "Linux"
 ]
 
 # Functions
-def check_init(identifier): # Check if function was initialized
-    print(identifier)
-    
-    return True
-
 def main():
+    # Check if os is valid
+    if valid_os.index(platform.system()):
+       return
+    
     # Initialization
     for fnc in init_functions:
-        results = check_init(fnc.__identifier__)
+        fnc = fnc()
         
-        if results:
-            fnc()
+        if fnc.check_init():
+            fnc.run() # Will return any potential errors
         else:
-            print(results)
+            continue
             
-        print("Functions initialized")
+    print("Functions initialized")
     
     port = 3333
     address = socket.gethostbyname(socket.getfqdn())
