@@ -3,9 +3,8 @@ Helps the program connect to the server.
 '''
 
 # Importing libraries
-import socket, time, yaml, pickle
+import socket, time, yaml, json
 from PyQt5 import QtWidgets, QtGui, QtCore, uic
-from multiprocessing.connection import Client
 import threading
 
 # Scripts
@@ -100,8 +99,8 @@ class ConnectToServer(QtCore.QThread):
     def __init__(self):
         super().__init__()
         
-        self.server = "192.168.0.165"
-        self.port = 3333
+        self.server = "192.168.56.1"
+        self.port = 2222
         
         self.isConnected = False
         
@@ -135,7 +134,8 @@ class ConnectToServer(QtCore.QThread):
             self.socket = None
             
             try:
-                self.socket = Client((self.server, self.port))
+                self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                self.socket.connect((self.server, self.port))
             except ConnectionRefusedError:
                 self.connectionLost.emit(1)
                 
@@ -154,13 +154,13 @@ class ConnectToServer(QtCore.QThread):
             username = loginCres['username'] # Get it
             password = loginCres['password']
             
-            self.socket.send(pickle.dumps({
+            self.socket.send(json.dumps({
                 'username': username,
                 'password': password
-            }))
+            }).encode())
             
             # Get results
-            results = pickle.loads(self.socket.recv())
+            results = json.loads(self.socket.recv(4096).decode())
             print(results)
             
             if results == "Success":
@@ -188,8 +188,22 @@ class ConnectToServer(QtCore.QThread):
                 break
             
             # Check status
-            response = self.sendInput('checkStatus', {})
-            print(response)
+            try:
+                self.socket.send(json.dumps({
+                    'status': 0,
+                    'message': {
+                        'action': 'checkStatus',
+                        'params': {}
+                    }
+                    }).encode())
+
+                response = json.loads(self.socket.recv(4096))
+                print(response)
+            except Exception as e:
+                print(e)
+                self.show.emit()
+                self.run()
+                break
             
             time.sleep(5)
                 
@@ -216,9 +230,9 @@ class ConnectToServer(QtCore.QThread):
         if self.isConnected:
             try:
                 print(input)
-                self.socket.send(pickle.dumps(input))
+                self.socket.send(json.dumps(input).encode())
 
-                response = pickle.loads(self.socket.recv())
+                response = json.loads(self.socket.recv(4096).decode())
                 return response
             except:
                 self.show.emit()

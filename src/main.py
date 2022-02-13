@@ -34,7 +34,7 @@ class App(QtWidgets.QSystemTrayIcon):
         
         self.featuresmenu = QtWidgets.QMenu("Features")
         
-        self.createDiary = QtWidgets.QAction("Create new diary/entry")
+        self.createDiary = QtWidgets.QAction("Your diary")
         self.createDiary.triggered.connect(self.diaryFunc)
         self.featuresmenu.addAction(self.createDiary)
         self.menu.addMenu(self.featuresmenu)
