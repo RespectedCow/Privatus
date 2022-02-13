@@ -1,14 +1,21 @@
 # Import libraries
 import sqlite3, datetime
-from typing import TYPE_CHECKING
+
+# Importing scripts
 
 # Classes
 class Database:
     
-    def __init__(self, database):
-        self.database = sqlite3.connect(database)
-        print("Initializing database.")
-        print("Database successfully opened.")
+    def __init__(self, database, console):
+        
+        self.console = console
+        
+        seperator = "*" * 20
+        self.console.print(seperator)
+        
+        self.database = sqlite3.connect(database, check_same_thread=False)
+        self.console.print("Initializing database.")
+        self.console.print("Database successfully opened.")
         
         # Get cursor
         self.cursor = self.database.cursor()
@@ -19,13 +26,13 @@ class Database:
         '''
         
         # Check if required tables exist
-        print("Checking if required tables exists.")
+        self.console.print("Checking if required tables exists.")
         self.cursor.execute(''' SELECT count(name) FROM sqlite_master WHERE type='table' AND name='users' ''')
         
         if self.cursor.fetchone()[0] == 1 :
-            print("User table exists.")
+            self.console.print("User table exists.")
         else: 
-            print("User table does not exists! Creating one now.")
+            self.console.print("User table does not exists! Creating one now.")
             
             # Create the table
             self.cursor.execute('''CREATE TABLE IF NOT EXISTS users
@@ -34,15 +41,15 @@ class Database:
             isAdmin        BOOLEAN  NOT NULL,
             DATETIME         TEXT);''')
             
-            print("User table created.")
+            self.console.print("User table created.")
             
         # Entry table
         self.cursor.execute(''' SELECT count(name) FROM sqlite_master WHERE type='table' AND name='entry' ''')
         
         if self.cursor.fetchone()[0] == 1 :
-            print("Entry table exists.")
+            self.console.print("Entry table exists.")
         else: 
-            print("Entry table does not exists! Creating one now.")
+            self.console.print("Entry table does not exists! Creating one now.")
             
             # Create the table
             self.cursor.execute('''CREATE TABLE IF NOT EXISTS entry
@@ -52,11 +59,16 @@ class Database:
             BODY         TEXT NOT NULL,
             DATETIME       TEXT     NOT NULL);''')
             
-            print("Entry table created.")
+            self.console.print("Entry table created.")
         
         self.database.commit()
-        print("Done")
-        print("Changes commited.")
+        self.console.print("Done")
+        self.console.print("Changes commited.")
+        
+        seperator = "*" * 20
+        self.console.print(seperator)
+        
+        self.console.print("")
         
     def create_user(self, name, password ,isadmin):
         '''
@@ -68,7 +80,7 @@ class Database:
             return "User exists! Please select another username"
         
         command = f'''INSERT INTO users (NAME, PASSWORD, DATETIME, isAdmin) VALUES (?, ? , ?, ?);'''
-        print(command)
+        self.console.print(command)
         
         # Get the datetime
         dt = datetime.datetime.now()
@@ -78,7 +90,7 @@ class Database:
         
         self.cursor.execute(command, (name, password, x, isadmin)) # Execute
         self.database.commit() # Commit changes
-        print(f"User {name} successfully created.")
+        self.console.print(f"User {name} successfully created.")
     
     def create_entry(self, user, title, body):
         # Check if user is an existing user
@@ -87,7 +99,7 @@ class Database:
         
         # Insert the entry
         command = f'''INSERT INTO entry (ID, OWNER, TITLE, BODY, DATETIME) VALUES (?, ?, ? , ?, ?);'''
-        print(command)
+        self.console.print(command)
         
         # Get the datetime
         dt = datetime.datetime.now()
@@ -100,7 +112,7 @@ class Database:
         
         self.cursor.execute(command, (id, user, title, body, time)) # Execute
         self.database.commit() # Commit changes
-        print(f"Entry successfully created.")
+        self.console.print(f"Entry successfully created.")
         
         return "Success"
     

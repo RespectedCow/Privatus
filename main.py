@@ -1,7 +1,7 @@
 # Importing libraries
 import platform
 import socket
-from tkinter import E, N
+import threading
 
 # Import scripts
 from src import server
@@ -34,15 +34,13 @@ def main():
         else:
             continue
             
-    print("Functions initialized")
+    print("Program initialized")
     
-    port = 3333
+    port = 2222
     address = socket.gethostbyname(socket.getfqdn())
     
     serverObject = server.Server(address, port)
-    serverObject.run()
-    
-    
+    threading.Thread(target=serverObject.run).start()
     
 # Main
 if __name__ == "__main__":

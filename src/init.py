@@ -1,8 +1,5 @@
 # Importing libraries
 import os
-import re
-import shutil
-from tkinter import E
 
 # Importing scripts
 from src import commons
@@ -22,11 +19,13 @@ class init:
     
         # Create the app data folder
         try:
+            print("Creating app data folder.")
             os.mkdir(self.appDataFolder)
         except:
             pass
         
         for directory in self.directories:
+            print("Creating " + directory + " folder")
             path = os.path.join(self.appDataFolder, directory)
             os.makedirs(path, exist_ok=True)
         

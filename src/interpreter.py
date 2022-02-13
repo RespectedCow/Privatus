@@ -1,13 +1,11 @@
 # Importing libraries
 import os
-import zlib
-import sys
 
 # Importing scripts
 from src import backupSystem
 
 # Classes
-class Interpreter:
+class ClientInterpreter:
     
     def __init__(self, database, user, connection):
         
