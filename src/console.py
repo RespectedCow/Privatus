@@ -41,6 +41,7 @@ class Console:
         self.y, self.x = self.screen.getmaxyx()
         
         self.running = False
+        self.interpreter = None
         self.stopEvent = stopEvent
         self.displaywinScroll_y = 0
         
@@ -126,10 +127,28 @@ class Console:
             isMatched = True
             self.end()
             
+        # Passes the command issued by the console to the server object if it is not matched
+        if self.interpreter != None:
+            results = self.interpreter(command_array)
+            
+            if results:
+                isMatched = True
+                self.print(results)
+            
         if isMatched == False:
             return "Invalid command"
+        
+    def connect_interpreter(self, interpreter_func):
+        self.interpreter = interpreter_func
             
     def key_pressed(self, key):
+        if key == "\t":
+            self.textbox_str = self.textbox_str + (" " * 5)
+            self.screen.addstr(key)
+            self.update()
+            
+            return
+        
         if key != "\n":
             self.textbox_str = self.textbox_str + key
             self.screen.addstr(key)

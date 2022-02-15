@@ -36,7 +36,11 @@ class Server:
         print("Initializing the server console")
         
         self.console = c.Console(self.stop)
+        self.console.connect_interpreter(self.console_interpreter)
+        
         threading.Thread(target=self.console.run).start()
+    
+        print("Console intialized.")
         
         self.console.print("Hosting server on " + self.address + " The port is " + str(self.port))
         
@@ -78,9 +82,14 @@ class Server:
         
         exit()
         
+    def console_interpreter(self, command_array):
+        isMatched = False
+        
+        if isMatched == False:
+            return
+        
     def client_thread(self, client):
         # Identification
-        print(client)
         identification = json.loads(client.recv(4096).decode())
         username = identification['username']
         password = identification['password']
