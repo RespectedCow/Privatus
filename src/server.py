@@ -1,10 +1,8 @@
 # Import libraries
-from re import S
-import socket
-from multiprocessing.connection import Listener
-import threading
-import json
+import socket, os, threading, json
 from time import sleep
+import importlib.machinery
+from inspect import getmembers, isfunction
 
 # Import scripts
 from src import database
@@ -83,7 +81,54 @@ class Server:
         exit()
         
     def console_interpreter(self, command_array):
+        """
+            After being done with it's own job, the console will pass the torch to the server object for heavy-duty jobs
+        such as database handling, server administration etc.
+        
+        Adapters are scripts that are ran when the user inputs a command that corrensponds to the adapter's name.
+        
+        It needs to have two basic functions which are listed below.
+        
+        There are two types of adapters: session and quick
+        session adapters are adapters that will last longer than just one command. Commands after an adapter of this type is executed will passed to the adapter
+        after the console passes the commands to the server.
+        
+        quick adapters are adapters that will only last one command.
+        
+        """
+        
         isMatched = False
+        adapterFolder = commons.get_appdatafolder() + "/adapters"
+        
+        adapter_required_func = (
+            "run", "get_type"
+        )
+        
+        for subdir, dirs, files in os.walk(adapterFolder): # To have a little modularity
+            for file in files:
+                file_info = os.path.splitext(file)
+                
+                if file_info[1] == ".py":
+                    # Check if adapter has the required functions first
+                    loader = importlib.machinery.SourceFileLoader('adapters', adapterFolder + "/" + file)
+                    adapter = loader.load_module('adapters')
+                    functions_list = getmembers(adapter, isfunction)
+                        
+                    for required in adapter_required_func:
+                        if functions_list.__contains__(required) == False:
+                            continue
+                    
+                    # If adapter has required functions
+                    name = file_info[0]
+
+                    if command_array[0] == name:
+                        script_type = adapter.get_type()
+                        
+                        results = adapter.run(self, command_array)
+                        return results
+                        
+                else: # Just to make it look good to my eyes I guess
+                    continue
         
         if isMatched == False:
             return

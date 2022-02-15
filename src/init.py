@@ -11,7 +11,7 @@ class init:
     appDataFolder = commons.get_appdatafolder()
     
     directories = [
-        "logs", "backupFolder"
+        "logs", "backupFolder", "adapters"
     ]
     
     def run(self):
