@@ -77,7 +77,7 @@ class Database:
         
         # Check if user exists
         if self.check_if_exist("users", "NAME", name):
-            return "User exists! Please select another username"
+            return False
         
         command = f'''INSERT INTO users (NAME, PASSWORD, DATETIME, isAdmin) VALUES (?, ? , ?, ?);'''
         self.console.print(command)
@@ -91,6 +91,8 @@ class Database:
         self.cursor.execute(command, (name, password, x, isadmin)) # Execute
         self.database.commit() # Commit changes
         self.console.print(f"User {name} successfully created.")
+        
+        return True
     
     def create_entry(self, user, title, body):
         # Check if user is an existing user
@@ -226,7 +228,7 @@ class Database:
         '''
     
         self.database.execute(f"DELETE from entry WHERE ID={id}")
-        print(f"DELETE from entry WHERE ID={id}")
+        self.print(f"DELETE from entry WHERE ID={id}")
         
         # Update entries above the current id
         rows = self.database.execute(f"SELECT * FROM entry")
@@ -239,6 +241,24 @@ class Database:
         
         self.database.commit()
         return "Successful"
+    
+    def destroyUser(self, name):
+        '''
+        Destroys the user with the provided name
+        '''
+        rows = self.database.execute(f"SELECT * FROM users")
+        
+        for i in rows:
+            print(i)
+        
+        try: 
+            self.cursor.execute("DELETE FROM users WHERE NAME=?", (name, ))
+            self.database.commit()
+        except Exception as e:
+            print(e)
+            return False
+        
+        return True
     
     def close(self):
         '''

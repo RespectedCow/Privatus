@@ -123,7 +123,7 @@ class Console:
         command_array = self.textbox_str.split()
         isMatched = False
         
-        if command_array[0] == "exit":
+        if command_array[0] == "quit":
             isMatched = True
             self.end()
             

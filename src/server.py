@@ -1,14 +1,18 @@
 # Import libraries
+from multiprocessing.connection import Connection
 import socket, os, threading, json
 from time import sleep
 import importlib.machinery
-from inspect import getmembers, isfunction
+from inspect import getmembers, isclass, isfunction
 
 # Import scripts
 from src import database
 from src import interpreter
 from src import commons
 from src import console as c
+
+# TYPES
+REQ_TYPE_DATABASE = "database"
 
 # Classes
 class Server:
@@ -25,6 +29,8 @@ class Server:
         self.port = port
         self.sock = sock
         self.shouldRun = False
+        self.sessionAdapter = None
+        self.sessionAdapterName = None
         self.threadCount = 0
         self.threads = {}
         
@@ -80,28 +86,49 @@ class Server:
         
         exit()
         
+    def adapter_request(self, req_type):
+        
+        # Manage request types here
+        if req_type == REQ_TYPE_DATABASE:
+            return self.database
+        
     def console_interpreter(self, command_array):
         """
-            After being done with it's own job, the console will pass the torch to the server object for heavy-duty jobs
-        such as database handling, server administration etc.
+            After being done with it's own job, the console will pass the commands to the server object for things
+        such as database handling, server administration, plugins, adapters etc.
         
         Adapters are scripts that are ran when the user inputs a command that corrensponds to the adapter's name.
         
-        It needs to have two basic functions which are listed below.
-        
         There are two types of adapters: session and quick
-        session adapters are adapters that will last longer than just one command. Commands after an adapter of this type is executed will passed to the adapter
-        after the console passes the commands to the server.
+        session adapters are adapters that will last longer than just one command. Commands after an adapter of this type is ran will be 
+        immediately passed to the adapter upon command execution.
         
-        quick adapters are adapters that will only last one command.
+        quick adapters are adapters that will only last one command. Normal commands basically.
+        
+        Required functions or classes:
+        quick adapters: run(func) get_type(func)
+        session_adapters: get_type(func) Session(class)
         
         """
         
+        # Adapter session
+        if self.sessionAdapter != None:
+            if command_array[0] == "exit":
+                self.sessionAdapter = None
+                return "Exited adapter session"
+            
+            res = self.sessionAdapter.execute_command(command_array)
+            if res == None:
+                res = "Adapter returned none"
+            return self.sessionAdapterName + " > " + res
+        
         isMatched = False
+        
+        # Adapter
         adapterFolder = commons.get_appdatafolder() + "/adapters"
         
         adapter_required_func = (
-            "run", "get_type"
+            "get_type"
         )
         
         for subdir, dirs, files in os.walk(adapterFolder): # To have a little modularity
@@ -113,6 +140,12 @@ class Server:
                     loader = importlib.machinery.SourceFileLoader('adapters', adapterFolder + "/" + file)
                     adapter = loader.load_module('adapters')
                     functions_list = getmembers(adapter, isfunction)
+                    
+                    # Filter returned list
+                    class_list = []
+                    
+                    for i in getmembers(adapter, isclass):
+                        class_list.append(i[0])
                         
                     for required in adapter_required_func:
                         if functions_list.__contains__(required) == False:
@@ -124,10 +157,20 @@ class Server:
                     if command_array[0] == name:
                         script_type = adapter.get_type()
                         
-                        results = adapter.run(self, command_array)
-                        return results
+                        if script_type == "quick" and functions_list.__contains__("run"):
+                            results = adapter.run(self, command_array)
+                            return results
+                        elif script_type == "session":
+                            if class_list.__contains__("Session"):
+                                self.sessionAdapterName = name
+                                self.sessionAdapter = adapter.Session(self)
+                                return self.sessionAdapterName + " > Entered adapter session"
+                            else:
+                                continue
+                        else:
+                            continue
                         
-                else: # Just to make it look good to my eyes I guess
+                else:
                     continue
         
         if isMatched == False:
@@ -161,12 +204,11 @@ class Server:
                     break
                 
                 try:
-                    message = client.recv(4096).decode()
-                    print(message)
+                    message = client.recv(6096).decode()
                     if message != None:
                         message = json.loads(message)
-                        self.console.print(message)
-                        
+                        self.console.print(str(message))
+                            
                         try:
                             return_message = clientInterpreter.check_message(message)
                             self.console.print(return_message)
@@ -177,14 +219,13 @@ class Server:
                             self.threadCount -= 1
                             self.onlineUsers.pop(username)
                             break                 
-                except:
+                except Exception as e:
+                    print(e)
                     self.console.print(f"User {username} disconnected.")
                     client.close()
                     self.onlineUsers.pop(username)
                     break
-            
-            client.send(json.dumps("Server closing").encode())
-            self.console.print("Server closing")
+                
             client.close()
                     
         elif self.database.check_if_exist("users", 0, username) and self.database.check_row_column(self.database.get_user("users", username), 1, password) and commons.check_dict(self.onlineUsers, username, True):
