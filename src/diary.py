@@ -1,4 +1,5 @@
 # Importing libraries
+from tkinter.messagebox import NO
 from PyQt5 import QtWidgets, QtCore, QtGui, uic
 from datetime import datetime
 # Classes
@@ -183,9 +184,16 @@ class Main(QtWidgets.QMainWindow):
             self.destroyEntryEvent.emit(results)
         
     def loadEntries(self, entries):
+        
         # Clear the tree widget
         self.entriesWidget.clear()
         self.entries.clear()
+        
+        # If an error occurs
+        if entries == None or entries == []:
+            QtWidgets.QMessageBox.information(self, "Create one!", "You have no entries.", QtWidgets.QMessageBox.Ok)
+            
+            entries = []
 
         # Load the entries
         sortedEntries = sorted(entries, key=lambda t: datetime.strptime(t[4], '%Y-%m-%d %H:%M:%S'), reverse=True)

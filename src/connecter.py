@@ -3,12 +3,41 @@ Helps the program connect to the server.
 '''
 
 # Importing libraries
-import socket, time, yaml, json
+import socket, time, yaml, json, struct
 from PyQt5 import QtWidgets, QtGui, QtCore, uic
 import threading
 
 # Scripts
 from src import login
+
+# Functions
+def send_msg(sock, msg):
+    # Prefix each message with a 4-byte length (network byte order)
+    msg = json.dumps(msg).encode()
+    msg = struct.pack('>I', len(msg)) + msg
+    sock.sendall(msg)
+
+def recv_msg(sock):
+    # Read message length and unpack it into an integer
+    raw_msglen = recvall(sock, 4)
+    if not raw_msglen:
+        return None
+    msglen = struct.unpack('>I', raw_msglen)[0]
+    # Read the message data
+    message = recvall(sock, msglen)
+    if message != None:
+        message = json.loads(message)
+    return message
+
+def recvall(sock, n):
+    # Helper function to recv n bytes or return None if EOF is hit
+    data = bytearray()
+    while len(data) < n:
+        packet = sock.recv(n - len(data))
+        if not packet:
+            return None
+        data.extend(packet)
+    return data
 
 # Classes
 class ConnectingWindow(QtWidgets.QMainWindow):
@@ -125,7 +154,7 @@ class ConnectToServer(QtCore.QThread):
         with open("./data/login.yaml", 'r') as stream:
             loginCres = yaml.safe_load(stream)
         
-        if loginCres == None or loginCres['username'] == None and loginCres['password'] == None:
+        if loginCres == None or loginCres['username'] == None or loginCres['password'] == None:
             self.setLabel.emit("User needs to enter login credentials")
             time.sleep(2)
             self.hide.emit()
@@ -154,13 +183,13 @@ class ConnectToServer(QtCore.QThread):
             username = loginCres['username'] # Get it
             password = loginCres['password']
             
-            self.socket.send(json.dumps({
+            send_msg(self.socket, { 
                 'username': username,
                 'password': password
-            }).encode())
+            })
             
             # Get results
-            results = json.loads(self.socket.recv(4096).decode())
+            results = recv_msg(self.socket)
             print(results)
             
             if results == "Success":
@@ -189,18 +218,12 @@ class ConnectToServer(QtCore.QThread):
             
             # Check status
             try:
-                self.socket.send(json.dumps({
-                    'status': 0,
-                    'message': {
-                        'action': 'checkStatus',
-                        'params': {}
-                    }
-                    }).encode())
-
-                response = json.loads(self.socket.recv(4096))
-                print(response)
+                response = self.sendInput('checkStatus', {})
+                
+                if response != "OK":
+                    # Error handling
+                    pass
             except Exception as e:
-                print(e)
                 self.show.emit()
                 self.run()
                 break
@@ -209,7 +232,7 @@ class ConnectToServer(QtCore.QThread):
                 
     def sendInput(self, action, params):
         '''
-        Format: \n
+        Format:
         input = {
             'status': 0,
             'message': {
@@ -229,11 +252,11 @@ class ConnectToServer(QtCore.QThread):
         
         if self.isConnected:
             try:
-                print(input)
-                self.socket.send(json.dumps(input).encode())
+                send_msg(self.socket, input)
 
-                response = json.loads(self.socket.recv(4096).decode())
+                response = recv_msg(self.socket)
+
                 return response
-            except:
+            except Exception as e:
                 self.show.emit()
                 self.run()

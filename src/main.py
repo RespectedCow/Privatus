@@ -58,15 +58,17 @@ class App(QtWidgets.QSystemTrayIcon):
     def diaryFunc(self):
         if self.diaryWindow == None and self.connection.isConnected:
             self.diaryWindow = diary.Main()
-            self.diaryWindow.loadEntries(self.connection.connection.sendInput('getEntries',{}))
+            
             self.diaryWindow.createEntryEvent.connect(self.createEntryFunc)
             self.diaryWindow.destroyEntryEvent.connect(self.destroyEntry)
             self.diaryWindow.searchEntriesEvent.connect(self.searchEntries)
             self.diaryWindow.editEntryEvent.connect(self.editEntry)
-            self.diaryWindow.showEntryEvent.connect(self.showEntry)
+            self.diaryWindow.showEntryEvent.connect(self.showEntry)            
+            self.loadEntires()
             self.diaryWindow.show()
+                
         elif self.connection.isConnected:
-            self.diaryWindow.loadEntries(self.connection.connection.sendInput('getEntries',{}))
+            self.loadEntires()
             self.diaryWindow.show()
         else:
             print("You are not connected to the server")
@@ -78,6 +80,10 @@ class App(QtWidgets.QSystemTrayIcon):
             
             msg.exec_()
             
+    def loadEntires(self):
+        message = self.connection.connection.sendInput('getEntries',{})
+        self.diaryWindow.loadEntries(message)
+            
     def createEntryFunc(self, title, content):
         # Send the title and content to the server
         self.connection.connection.sendInput("createEntry", {
@@ -85,10 +91,11 @@ class App(QtWidgets.QSystemTrayIcon):
             'content': content
         })
         
-        self.diaryWindow.loadEntries(self.connection.connection.sendInput('getEntries', {}))
+        self.loadEntires()
         
     def searchEntries(self, term):
-        self.diaryWindow.loadEntries(self.connection.connection.sendInput("searchEntries", {'searchterm': term}))
+        entries = self.connection.connection.sendInput("searchEntries", {'searchterm': term})
+        self.loadEntires(entries)
         
         return
     
@@ -101,7 +108,7 @@ class App(QtWidgets.QSystemTrayIcon):
         })
         
         # Reload the entries
-        self.diaryWindow.loadEntries(self.connection.connection.sendInput('getEntries', {}))
+        self.loadEntires()
         return
     
     def showEntry(self, id):
@@ -112,7 +119,7 @@ class App(QtWidgets.QSystemTrayIcon):
             'id': id
         })
         
-        self.diaryWindow.loadEntries(self.connection.connection.sendInput('getEntries', {}))
+        self.loadEntires()
     
     def logout(self):
         # Check if connection exists
