@@ -228,7 +228,7 @@ class Database:
         '''
     
         self.database.execute(f"DELETE from entry WHERE ID={id}")
-        self.print(f"DELETE from entry WHERE ID={id}")
+        self.console.print(f"DELETE from entry WHERE ID={id}")
         
         # Update entries above the current id
         rows = self.database.execute(f"SELECT * FROM entry")

@@ -111,8 +111,9 @@ class Console:
         if self.stopEvent != None:
             self.stopEvent()
         
-    def print(self, str):
-        self.displayWindow.addstr(str + "\n")
+    def print(self, msg):
+        msg = str(msg)
+        self.displayWindow.addstr(msg + "\n")
         self.update()
         
     def update(self):
