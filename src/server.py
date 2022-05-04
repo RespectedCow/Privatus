@@ -247,6 +247,23 @@ class Server:
         password = identification['password']
         self.console.print("Client trying to log in as " + username)
         
+        # Check if user was banned
+        with open(commons.get_appdatafolder() + "/data/banned_users.txt", "r") as f:
+            banned_users = f.readlines()
+            for banned_user in banned_users:
+                banned_user = banned_user.strip()
+                print(banned_user)
+                
+                if banned_user == username:
+                    send_msg(client, "You are banned.")
+                    self.console.print(f"User {username} was banned.")
+                    client.close()
+                    if self.onlineUsers.__contains__(username):
+                        self.onlineUsers.pop(username)
+                    self.threadCount -= 1
+                    
+                    return
+        
         # Check if returned data is valid
         if username == None or password == None:
             send_msg(client, "Incorrect")
@@ -260,7 +277,7 @@ class Server:
             send_msg(client, "Success")
             
             # Add user to online user list
-            self.onlineUsers[username] = True
+            self.onlineUsers[username] = client
             
             while True:
                 
@@ -278,7 +295,7 @@ class Server:
                             self.console.print(f"User {username} disconnected.")
                             client.close()
                             self.threadCount -= 1
-                            if self.onlineUsers[username] != None:
+                            if self.onlineUsers.__contains__(username):
                                 self.onlineUsers.pop(username)
                             break                 
                 except Exception as e:
@@ -286,7 +303,7 @@ class Server:
                     print(self.onlineUsers)
                     self.console.print(f"User {username} disconnected.")
                     client.close()
-                    if self.onlineUsers[username] != None:
+                    if self.onlineUsers.__contains__(username):
                         self.onlineUsers.pop(username)
                     self.threadCount -= 1
                     break
@@ -297,13 +314,13 @@ class Server:
             send_msg(client, "Same user already logged in.")
             self.console.print(f"User {username} disconnected.")
             client.close()
-            if self.onlineUsers[username] != None:
+            if self.onlineUsers.__contains__(username):
                 self.onlineUsers.pop(username)
             self.threadCount -= 1
         else:
             send_msg(client, "Incorrect username or password")
             self.console.print(f"User {username} disconnected.")
             client.close()
-            if self.onlineUsers[username] != None:
+            if self.onlineUsers.__contains__(username):
                 self.onlineUsers.pop(username)
             self.threadCount -= 1
