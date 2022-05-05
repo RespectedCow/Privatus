@@ -44,8 +44,10 @@ class Console:
         self.interpreter = None
         self.stopEvent = stopEvent
         self.displaywinScroll_y = 0
+        self.text_lines = 0
         
-        self.displayWindowSize_y = self.y + 100
+        self.padSize = self.y - 2
+        self.displayWindowSize_y = self.y + 100000
         self.displayWindowSize_x = self.x
         
         # Display window
@@ -112,12 +114,19 @@ class Console:
             self.stopEvent()
         
     def print(self, msg):
+        self.text_lines += 1
+        
         msg = str(msg)
         self.displayWindow.addstr(msg + "\n")
         self.update()
         
+        if self.text_lines > self.padSize + self.displaywinScroll_y - 2: # 2 is the offset appararently
+            if self.displaywinScroll_y != self.displayWindowSize_y - 1:
+                    self.displaywinScroll_y += 1
+                    self.update()
+        
     def update(self):
-        self.displayWindow.refresh(self.displaywinScroll_y, 0, 1, 0, self.y - 2, self.x - 1)
+        self.displayWindow.refresh(self.displaywinScroll_y, 0, 1, 0, self.padSize, self.x - 1)
         self.screen.refresh()
         
     def interprete_command(self):
@@ -127,6 +136,11 @@ class Console:
         if command_array[0] == "quit":
             isMatched = True
             self.end()
+        if command_array[0] == "clear":
+            isMatched = True
+            self.displayWindow.clear()
+            
+            self.text_lines = 0
             
         # Passes the command issued by the console to the server object if it is not matched
         if self.interpreter != None:
