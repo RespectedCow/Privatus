@@ -4,9 +4,8 @@ This script will basically act as the launcher for the application.
 The purpose of this application is to be able to manage the user's computer and automate tasks.
 """
 # Importing libraries
-import numbers
 from PyQt5 import QtCore, QtWidgets, QtGui
-import yaml, sys, requests
+import yaml, sys, requests, zipfile, os, subprocess, shutil
 
 # Import scripts
 from src import main as maingui
@@ -48,6 +47,13 @@ def getVerFromTag(tag):
             
     return float(version)
 
+def getUpdateWithVersion(version, updates_array):
+    for update in updates_array:
+        up_version = getVerFromTag(update[0])
+        
+        if up_version == version:
+            return update
+
 def getLastestVersion(array):
     """
     This function basically finds the highest number in an array
@@ -55,8 +61,10 @@ def getLastestVersion(array):
     
     latest = 0
     for version, release in array:
+        version = getVerFromTag(version)
+        
         if version > latest:
-            version = latest
+            latest = version
             
     return latest
 
@@ -68,40 +76,91 @@ def updateApplication():
     
     l_version_f = getVerFromTag(data['version']) 
     
-    releases = requests.get("https://api.github.com/repos/RespectedCow/Project-Oasis/releases")
-    releases = releases.json()
-    for release in releases:
-        branch = release["target_commitish"]
-        r_version = release["tag_name"]
-        r_version_f = getVerFromTag(r_version)
+    try:
+        releases = requests.get("https://api.github.com/repos/RespectedCow/Project-Oasis/releases")
+    except requests.ConnectionError as e:
+        e = str(e)
         
-        updates = []
-        if branch == "main":
-            # Check if r_version is higher than l_version if so then notify the user
-            if r_version_f > l_version_f:
-                updates.append((r_version, release))
-                
-    latest_update = getLastestVersion(updates)
-    latest_version = latest_update[0]
-    
-    # Check if user wants to update
-    msg = QtWidgets.QMessageBox()
-    icon = QtGui.QIcon()
-    icon.addPixmap(QtGui.QPixmap("cowicon.png"), QtGui.QIcon.Selected, QtGui.QIcon.On)
-    msg.setWindowIcon(icon)
-    msg.setIcon(QtWidgets.QMessageBox.Information)
-    msg.setText(f"There's a new update availabel! \nDo you want to download it? (Version: {latest_version})")
-    msg.setWindowTitle("There's a update!") 
-    yesButton = msg.addButton('Yes', QtWidgets.QMessageBox.YesRole)
-    noButton = msg.addButton('No', QtWidgets.QMessageBox.NoRole)
-
-    msg.exec_()
-                
-    if msg.clickedButton() == yesButton:
-        # Update the application
-        pass
-    elif msg.clickedButton() == noButton:
+        msg = QtWidgets.QMessageBox()
+        icon = QtGui.QIcon()
+        icon.addPixmap(QtGui.QPixmap("cowicon.png"), QtGui.QIcon.Selected, QtGui.QIcon.On)
+        msg.setWindowIcon(icon)
+        msg.setIcon(QtWidgets.QMessageBox.Warning)
+        msg.setText(f"There was an error connecting to the github api! (Error: {e})")
+        msg.setWindowTitle("Error!") 
+        msg.setStandardButtons(QtWidgets.QMessageBox.Ok)
+        
+        msg.exec_()
+        
         return
+      
+    if releases.status_code == 200:  
+        releases = releases.json()
+        for release in releases:
+            branch = release["target_commitish"]
+            r_version = release["tag_name"]
+            r_version_f = getVerFromTag(r_version)
+            
+            updates = []
+            if branch == "main":
+                # Check if r_version is higher than l_version if so then notify the user
+                if r_version_f > l_version_f:
+                    updates.append((r_version, release))
+                    
+        latest_version = getLastestVersion(updates)
+        latest_update = getUpdateWithVersion(latest_version, updates)
+        
+        # Check if user wants to update
+        if latest_update != None: 
+            msg = QtWidgets.QMessageBox()
+            icon = QtGui.QIcon()
+            icon.addPixmap(QtGui.QPixmap("cowicon.png"), QtGui.QIcon.Selected, QtGui.QIcon.On)
+            msg.setWindowIcon(icon)
+            msg.setIcon(QtWidgets.QMessageBox.Information)
+            msg.setText(f"There's a new update availabel! \nDo you want to download it? (Version: {latest_update[0]})")
+            msg.setWindowTitle("There's a update!") 
+            yesButton = msg.addButton('Yes', QtWidgets.QMessageBox.YesRole)
+            noButton = msg.addButton('No', QtWidgets.QMessageBox.NoRole)
+
+            msg.exec_()
+                        
+            if msg.clickedButton() == yesButton:
+                # Update the application
+                pass
+            elif msg.clickedButton() == noButton:
+                return
+            
+            # Here is the actual updating occurs
+            link = latest_update[1]["assets"][0]["browser_download_url"]
+            response = requests.get(link, allow_redirects=True)
+            save_to = "../" + latest_update[1]["assets"][0]["name"]
+            
+            with open(save_to, "wb") as f:
+                f.write(response.content)
+                
+            # Extract the file
+            with zipfile.ZipFile(save_to, "r") as f:
+                if os.path.exists("../oasis-client"):
+                    os.rename("../oasis-client", "../old-version")
+                f.extractall("../oasis-client")
+                
+                subprocess.Popen("../oasis-client/main.py")
+                os.remove(save_to)
+                sys.exit()
+        else:
+            for folder in os.listdir("../"):
+                if folder != "oasis-client":
+                    shutil.rmtree("../" + str(folder))
+            
+            return
+        
+    elif release.status_code == 404:
+        print("No updates here." )
+        return
+    else:
+        print("Unable to retrieve information here.")
+        return
+    
 
 if __name__ == "__main__":
     main()
