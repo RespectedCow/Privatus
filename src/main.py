@@ -80,9 +80,11 @@ class App(QtWidgets.QSystemTrayIcon):
             
             msg.exec_()
             
-    def loadEntires(self):
-        message = self.connection.connection.sendInput('getEntries',{})
-        self.diaryWindow.loadEntries(message)
+    def loadEntires(self, entries=None):
+        if entries == None:
+            entries = self.connection.connection.sendInput('getEntries',{})
+        
+        self.diaryWindow.loadEntries(entries)
             
     def createEntryFunc(self, title, content):
         # Send the title and content to the server

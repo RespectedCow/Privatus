@@ -3,8 +3,8 @@ Helps the program connect to the server.
 '''
 
 # Importing libraries
-import socket, time, yaml, json, struct
-from PyQt5 import QtWidgets, QtGui, QtCore, uic
+import socket, time, yaml, json, struct, sys, os
+from PyQt5 import QtWidgets, QtGui, QtCore
 import threading
 
 # Scripts
@@ -39,6 +39,16 @@ def recvall(sock, n):
         data.extend(packet)
     return data
 
+def resource_path(relative_path):
+    """ Get absolute path to resource, works for dev and for PyInstaller """
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+
+    return os.path.join(base_path, relative_path)
+
 # Classes
 class ConnectingWindow(QtWidgets.QMainWindow):
     messageReceived = QtCore.pyqtSignal(str)
@@ -50,7 +60,18 @@ class ConnectingWindow(QtWidgets.QMainWindow):
         QtWidgets.QMainWindow.__init__(self)
         
         # Load UI
-        uic.loadUi("./lib/uis/connectToServer.ui", self)
+        # uic.loadUi("./lib/uis/connectToServer.ui", self)
+        self.resize(428, 116)
+        self.centralwidget = QtWidgets.QWidget(self)
+        self.centralwidget.setObjectName("centralwidget")
+        self.progressBar = QtWidgets.QProgressBar(self.centralwidget)
+        self.progressBar.setGeometry(QtCore.QRect(30, 50, 351, 23))
+        self.progressBar.setProperty("value", 24)
+        self.progressBar.setObjectName("progressBar")
+        self.label = QtWidgets.QLabel(self.centralwidget)
+        self.label.setGeometry(QtCore.QRect(30, 30, 271, 16))
+        self.label.setObjectName("label")
+        self.setCentralWidget(self.centralwidget)
         
         # Set icon and title
         icon = QtGui.QIcon()
@@ -129,6 +150,15 @@ class ConnectToServer(QtCore.QThread):
         super().__init__()
         
         self.server = "192.168.56.1"
+        
+        with open("package.yaml", 'r') as stream:
+            data = yaml.safe_load(stream)
+            
+        if 'server' in data:
+            self.server = data["server"]
+            
+        print(self.server)
+        
         self.port = 2222
         
         self.isConnected = False
