@@ -1,10 +1,14 @@
 # Import libraries
-from operator import truediv
 import struct
 import socket, os, threading, json
+import base64, hashlib, os
 from time import sleep
 import importlib.machinery
 from inspect import getmembers, isclass, isfunction
+from Crypto.PublicKey import RSA
+from Crypto import Random
+from Crypto.Cipher import PKCS1_OAEP
+from Crypto.Cipher import AES
 
 # Import scripts
 from src import database
@@ -16,13 +20,23 @@ from src import console as c
 REQ_TYPE_DATABASE = "database"
 
 # Functions
-def send_msg(sock, msg):
+def send_msg(sock, msg, public_key=None):
     # Prefix each message with a 4-byte length (network byte order)
-    msg = json.dumps(msg).encode()
+    if type(msg) != bytes:
+        msg = json.dumps(msg)
+        msg = msg.encode()
+    
+    if public_key:
+        if type(public_key) == PKCS1_OAEP.PKCS1OAEP_Cipher:
+            msg = public_key.encrypt(msg)
+        if type(public_key) == AESCipher:
+            msg = msg.decode()
+            msg = public_key.encrypt(msg)
+    
     msg = struct.pack('>I', len(msg)) + msg
     sock.sendall(msg)
 
-def recv_msg(sock):
+def recv_msg(sock, private_key=None):
     # Read message length and unpack it into an integer
     raw_msglen = recvall(sock, 4)
     if not raw_msglen:
@@ -30,7 +44,20 @@ def recv_msg(sock):
     msglen = struct.unpack('>I', raw_msglen)[0]
     # Read the message data
     message = recvall(sock, msglen)
-    message = json.loads(message)
+    if message != None:
+        if private_key:
+            message = private_key.decrypt(message)
+        else:
+            message = message.decode()
+            
+        try:
+            message = message.decode()
+        except:
+            pass
+        
+        if type(message) != bytes:
+            message = json.loads(message)
+        
     return message
 
 def recvall(sock, n):
@@ -44,6 +71,31 @@ def recvall(sock, n):
     return data
 
 # Classes
+class AESCipher(object):
+    
+    def __init__(self, key): 
+        self.bs = AES.block_size
+        self.key = hashlib.sha256(key).digest()
+
+    def encrypt(self, raw):
+        raw = self._pad(raw)
+        iv = Random.new().read(AES.block_size)
+        cipher = AES.new(self.key, AES.MODE_CBC, iv)
+        return base64.b64encode(iv + cipher.encrypt(raw.encode()))
+
+    def decrypt(self, enc):
+        enc = base64.b64decode(enc)
+        iv = enc[:AES.block_size]
+        cipher = AES.new(self.key, AES.MODE_CBC, iv)
+        return self._unpad(cipher.decrypt(enc[AES.block_size:])).decode('utf-8')
+
+    def _pad(self, s):
+        return s + (self.bs - len(s) % self.bs) * chr(self.bs - len(s) % self.bs)
+
+    @staticmethod
+    def _unpad(s):
+        return s[:-ord(s[len(s)-1:])]
+
 class Server:
     
     def __init__(self, address, port):
@@ -62,6 +114,9 @@ class Server:
         self.sessionAdapterName = None
         self.threadCount = 0
         self.threads = {}
+        self.private_key = None
+        self.c_public_key = None
+        self.aes_key = None
         
         self.onlineUsers = {}
         
@@ -141,7 +196,7 @@ class Server:
                     
         # Filter returned list
         class_list = []
-             
+        
         for i in getmembers(adapter, isclass):
             class_list.append(i[0])
         
@@ -241,8 +296,23 @@ class Server:
             return
         
     def client_thread(self, client):
+        # Generate public and private keys
+        random_generator = Random.new().read
+        self.private_key = RSA.generate(1024, random_generator)
+        public_key = self.private_key.publickey()
+        self.private_key = PKCS1_OAEP.new(self.private_key)
+        
+        # Confirm connection
+        self.c_public_key = recv_msg(client)
+        self.c_public_key = RSA.importKey(self.c_public_key)
+        self.c_public_key = PKCS1_OAEP.new(self.c_public_key)
+        
+        # Send public and private keys
+        if self.c_public_key:
+            send_msg(client, public_key.exportKey().decode())
+        
         # Identification
-        identification = recv_msg(client)
+        identification = recv_msg(client, self.private_key)
         username = identification['username']
         password = identification['password']
         self.console.print("Client trying to log in as " + username)
@@ -252,10 +322,9 @@ class Server:
             banned_users = f.readlines()
             for banned_user in banned_users:
                 banned_user = banned_user.strip()
-                print(banned_user)
                 
                 if banned_user == username:
-                    send_msg(client, "You are banned.")
+                    send_msg(client, "You are banned.", self.c_public_key)
                     self.console.print(f"User {username} was banned.")
                     client.close()
                     if self.onlineUsers.__contains__(username):
@@ -266,7 +335,7 @@ class Server:
         
         # Check if returned data is valid
         if username == None or password == None:
-            send_msg(client, "Incorrect")
+            send_msg(client, "Incorrect", self.c_public_key)
             client.close()
             
         # Init the interpreter
@@ -274,7 +343,13 @@ class Server:
         
         if self.database.check_if_exist("users", 0, username) and self.database.check_row_column(self.database.get_user("users", username), 1, password) and commons.check_dict(self.onlineUsers, username, True) == False:
             self.console.print(f"User {username} logged in.")
-            send_msg(client, "Success")
+            send_msg(client, "Success", self.c_public_key)
+            
+            # Generate key because we wish to use it from now on and send it to the client
+            aes_key = os.urandom(128)[:10]
+            self.aes_key = AESCipher(aes_key)
+            
+            send_msg(client, aes_key, self.c_public_key)
             
             # Add user to online user list
             self.onlineUsers[username] = client
@@ -285,12 +360,12 @@ class Server:
                     break
                 
                 try:
-                    message = recv_msg(client)
+                    message = recv_msg(client, self.aes_key)
                     if message != None:
                             
                         try:
                             return_message = clientInterpreter.check_message(message)
-                            send_msg(client, return_message)
+                            send_msg(client, return_message, self.aes_key)
                         except socket.error:
                             self.console.print(f"User {username} disconnected.")
                             client.close()
@@ -299,8 +374,6 @@ class Server:
                                 self.onlineUsers.pop(username)
                             break                 
                 except Exception as e:
-                    print(str(e))
-                    print(self.onlineUsers)
                     self.console.print(f"User {username} disconnected.")
                     client.close()
                     if self.onlineUsers.__contains__(username):
@@ -311,14 +384,14 @@ class Server:
             client.close()
                     
         elif self.database.check_if_exist("users", 0, username) and self.database.check_row_column(self.database.get_user("users", username), 1, password) and commons.check_dict(self.onlineUsers, username, True):
-            send_msg(client, "Same user already logged in.")
+            send_msg(client, "Same user already logged in.", self.c_public_key)
             self.console.print(f"User {username} disconnected.")
             client.close()
             if self.onlineUsers.__contains__(username):
                 self.onlineUsers.pop(username)
             self.threadCount -= 1
         else:
-            send_msg(client, "Incorrect username or password")
+            send_msg(client, "Incorrect username or password", self.c_public_key)
             self.console.print(f"User {username} disconnected.")
             client.close()
             if self.onlineUsers.__contains__(username):
