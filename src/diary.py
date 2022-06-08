@@ -1,8 +1,76 @@
 # Importing libraries
-from PyQt5 import QtWidgets, QtCore, QtGui
+from operator import index
+from PyQt5 import QtWidgets, QtCore, QtGui, uic
 from datetime import datetime
+from Crypto.Cipher import AES
+from Crypto import Random
+import hashlib, base64
 
 # Classes
+class AESCipher(object):
+    
+    def __init__(self, key): 
+        self.bs = AES.block_size
+        self.key = hashlib.sha256(key).digest()
+
+    def encrypt(self, raw):
+        raw = self._pad(raw)
+        iv = Random.new().read(AES.block_size)
+        cipher = AES.new(self.key, AES.MODE_CBC, iv)
+        return base64.b64encode(iv + cipher.encrypt(raw.encode()))
+
+    def decrypt(self, enc):
+        enc = base64.b64decode(enc)
+        iv = enc[:AES.block_size]
+        cipher = AES.new(self.key, AES.MODE_CBC, iv)
+        return self._unpad(cipher.decrypt(enc[AES.block_size:])).decode('utf-8')
+
+    def _pad(self, s):
+        return s + (self.bs - len(s) % self.bs) * chr(self.bs - len(s) % self.bs)
+
+    @staticmethod
+    def _unpad(s):
+        return s[:-ord(s[len(s)-1:])]
+
+
+class diaryLogin(QtWidgets.QMainWindow):
+    
+    showMainDiary = QtCore.pyqtSignal(str)
+    
+    def __init__(self):
+        QtWidgets.QMainWindow.__init__(self)
+        
+        # Load the ui
+        uic.loadUi("lib/uis/diaryLogin.ui", self)
+        
+        # Set window attributes
+        self.icon = QtGui.QIcon()
+        self.icon.addPixmap(QtGui.QPixmap("cowicon.png"), QtGui.QIcon.Selected, QtGui.QIcon.On)
+        
+        self.setWindowIcon(self.icon)
+        self.setWindowTitle("Diary login")
+        
+        # Class variables
+        self.stopLoop = False
+        
+        # Set triggers
+        self.loginButton.clicked.connect(self.loginButtonClicked)
+        
+        # Call functions
+        self.show()
+        
+    def loginButtonClicked(self):
+        passphrase = self.passwordEdit.toPlainText()
+        
+        if passphrase == "" or passphrase == None:
+            QtWidgets.QMessageBox.warning(self, "Error!", "You cannot leave the passphrase field blank!", QtWidgets.QMessageBox.Ok)
+            
+            return
+        
+        self.showMainDiary.emit(passphrase)
+        self.close()
+
+
 class showEntry(QtWidgets.QMainWindow):
     
     def __init__(self, entry):
@@ -187,7 +255,7 @@ class editEntry(QtWidgets.QMainWindow):
         self.menubar.setObjectName("menubar")
         self.setMenuBar(self.menubar)
         
-        self.setFields(entry[0], entry[2])
+        self.setFields(entry[2], entry[3])
         
         # Set window attributes
         self.icon = QtGui.QIcon()
@@ -230,8 +298,12 @@ class Main(QtWidgets.QMainWindow):
     showEntryEvent = QtCore.pyqtSignal(int)
     editEntryEvent = QtCore.pyqtSignal(str, str, int)
     
-    def __init__(self):
+    def __init__(self, connection):
         QtWidgets.QMainWindow.__init__(self)
+        
+        # Get encryption passphrase
+        self.diaryLoginWindow = diaryLogin()
+        self.diaryLoginWindow.show()
         
         # Load ui
         self.setObjectName("MainWindow")
@@ -288,6 +360,8 @@ class Main(QtWidgets.QMainWindow):
         self.createEntryWindow = None
         self.showEntryWindow = None
         self.editEntryWindow = None
+        self.connection = connection
+        self.passphrase = None
         self.entries = {}
         
         # Set triggers
@@ -297,8 +371,24 @@ class Main(QtWidgets.QMainWindow):
         self.showButton.clicked.connect(self.showEntryBroadcast)
         self.editButton.clicked.connect(self.openEditWindow)
         
+        self.diaryLoginWindow.showMainDiary.connect(self.open)
+        
+    def open(self, passphrase):
+        passphrase = passphrase.encode()
+        self.passphrase = AESCipher(passphrase)
+        
+        self.loadEntries()
+        self.show()
+        
     def searchEntries(self):
-        self.searchEntriesEvent.emit(self.searchBar.text())
+        potential_entries = []
+        searchterm = self.searchBar.text()
+        
+        for entry in self.entries:
+            if searchterm in entry[2]:
+                potential_entries.append(entry)
+                
+        self.loadEntries(potential_entries)
         
     def openEditWindow(self):
         # Get current selected item
@@ -315,11 +405,17 @@ class Main(QtWidgets.QMainWindow):
         results = findEntry(self.entries, title, datetime)
         
         if results != None:
-            self.editEntryWindow = editEntry(self.entries[results], results)
+            self.editEntryWindow = editEntry(findEntryWithID(self.entries, results), results)
             self.editEntryWindow.editEntryEvent.connect(self.editEntryFunc)
             self.editEntryWindow.show()
         
     def editEntryFunc(self, title, content, id):
+        title = self.passphrase.encrypt(title)
+        content = self.passphrase.encrypt(content)
+        
+        title = title.decode()
+        content = content.decode()
+        
         self.editEntryEvent.emit(title, content, id)
         
     def destroyEntry(self):
@@ -338,24 +434,20 @@ class Main(QtWidgets.QMainWindow):
         if results != None:
             self.destroyEntryEvent.emit(results)
         
-    def loadEntries(self, entries):
+    def loadEntries(self, entries=None):
+        
+        if entries == None:
+            entries = self.connection.connection.sendInput('getEntries',{})
+            entries = self.decryptEntries(entries)
+            self.entries = entries
         
         # Clear the tree widget
         self.entriesWidget.clear()
-        self.entries.clear()
-        
-        # If an error occurs
-        if entries == None or entries == []:
-            QtWidgets.QMessageBox.information(self, "Create one!", "You have no entries.", QtWidgets.QMessageBox.Ok)
-            
-            entries = []
-            return
 
         # Load the entries
         sortedEntries = sorted(entries, key=lambda t: datetime.strptime(t[4], '%Y-%m-%d %H:%M:%S'), reverse=True)
-        
+
         for entry in sortedEntries:
-            self.entries[entry[0]] = (entry[2], entry[4], entry[3])
             newEntry = QtWidgets.QTreeWidgetItem(self.entriesWidget, [entry[4], entry[2]])
             
     def showEntryBroadcast(self):
@@ -375,25 +467,57 @@ class Main(QtWidgets.QMainWindow):
             self.showEntryEvent.emit(results)
             
     def show_entry(self, entry):
+        
+        # Decrypt the entry
+        entry[2] = self.passphrase.decrypt(entry[2])
+        entry[3] = self.passphrase.decrypt(entry[3])
+        
         self.showEntryWindow = showEntry(entry)
         self.showEntryWindow.show()
         
     def createEntry(self):
         if self.createEntryWindow == None:
             self.createEntryWindow = createEntry()
-            self.createEntryWindow.createEntryEvent.connect(self.createEntryEvent.emit)
+            self.createEntryWindow.createEntryEvent.connect(self.createEntryClicked)
             self.createEntryWindow.resetFields()
             self.createEntryWindow.show()
         else:
             self.createEntryWindow.resetFields()
             self.createEntryWindow.show()
             
+    def decryptEntries(self, entries):
+        index = 0
+        for entry in entries:
+            entries[index][2] = self.passphrase.decrypt(entry[2])
+            entries[index][3] = self.passphrase.decrypt(entry[3])
+                
+            index += 1
+        
+        return entries
+            
+    def createEntryClicked(self, title, content):
+        title = self.passphrase.encrypt(title)
+        content = self.passphrase.encrypt(content)
+        
+        title = title.decode()
+        content = content.decode()
+        
+        self.createEntryEvent.emit(title, content)
+            
             
 # Functions
 def findEntry(entries, title, datetime):
     
-    for id, data in entries.items():
-        if data[0] == title and data[1] == datetime:
-            return id
+    for entry in entries:
+        if entry[2] == title and entry[4] == datetime:
+            return entry[0]
         
+    return None
+
+def findEntryWithID(entries, id):
+    
+    for entry in entries:
+        if entry[0] == id:
+            return entry
+    
     return None
