@@ -319,17 +319,17 @@ class ConnectToServer(QtCore.QThread):
                 break
             
             # Check status
-            # try:
-            response = self.sendInput('checkStatus', {})
-                
-            if response != "OK":
-                # Error handling
-                pass
-            # except Exception as e:
-            #     print(str(e) + "e")
-            #     self.show.emit()
-            #     self.run()
-            #     break
+            try:
+                response = self.sendInput('checkStatus', {})
+                    
+                if response != "OK":
+                    # Error handling
+                    pass
+            except Exception as e:
+                print(str(e) + "e")
+                self.show.emit()
+                self.run()
+                break
             
             time.sleep(5)
                 
@@ -354,13 +354,13 @@ class ConnectToServer(QtCore.QThread):
         }
         
         if self.isConnected:
-            # try:
-            send_msg(self.socket, input, self.aes_key)
+            try:
+                send_msg(self.socket, input, self.aes_key)
 
-            response = recv_msg(self.socket, self.aes_key)
+                response = recv_msg(self.socket, self.aes_key)
 
-            return response
-            # except Exception as e:
-            #     print(e)
-            #     self.show.emit()
-            #     self.run()
+                return response
+            except Exception as e:
+                print(e)
+                self.show.emit()
+                self.run()
