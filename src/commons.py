@@ -11,9 +11,9 @@ def get_appdatafolder():
     currentOs = platform.system()
     
     if currentOs == "Windows":
-        return os.getenv('APPDATA') + "/.project-oasis"
+        return os.getenv('APPDATA') + "/.privatus"
     if currentOs == "Linux":
-        return os.path.expanduser('~') +  + "/.project-oasis"
+        return os.path.expanduser('~') +  + "/.privatus"
 
 def check_array(array, value):
     for i in array:
