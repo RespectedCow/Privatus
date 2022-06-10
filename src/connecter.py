@@ -12,7 +12,7 @@ from Crypto.Cipher import PKCS1_OAEP
 from Crypto.Cipher import AES
 
 # Scripts
-from src import login
+from src import login, commons
 
 # Functions
 def send_msg(sock, msg, public_key=None):
@@ -205,11 +205,12 @@ class ConnectToServer(QtCore.QThread):
         self.s_public_key = None
         self.aes_key = None
         
-        with open("package.yaml", 'r') as stream:
+        with open(commons.get_appdatafolder() + "/config.yaml", 'r') as stream:
             data = yaml.safe_load(stream)
-            
-        if 'server' in data:
-            self.server = data["server"]
+        
+        if data != None:
+            if 'server' in data:
+                self.server = data["server"]
             
         print(self.server)
         
@@ -235,7 +236,7 @@ class ConnectToServer(QtCore.QThread):
             time.sleep(0.005)
             
         # Check if user entered login credentials
-        with open("./data/login.yaml", 'r') as stream:
+        with open(commons.get_appdatafolder() + "/data/login.yaml", 'r') as stream:
             loginCres = yaml.safe_load(stream)
         
         if loginCres == None or loginCres['username'] == None or loginCres['password'] == None:

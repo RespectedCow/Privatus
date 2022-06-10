@@ -8,7 +8,7 @@ import yaml
 import io
 
 # Import scripts
-from src import connecter
+from src import commons
 
 # Main login window
 class LoginWindow(QtWidgets.QMainWindow):
@@ -177,7 +177,7 @@ class LoginWindow(QtWidgets.QMainWindow):
             return
         
         # Write to the file.
-        with io.open('./data/login.yaml', 'w', encoding='utf8') as outfile:
+        with io.open(commons.get_appdatafolder() + '/data/login.yaml', 'w', encoding='utf8') as outfile:
             yaml.dump({
                 'username': username,
                 'password': password

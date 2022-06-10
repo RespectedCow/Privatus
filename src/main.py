@@ -62,7 +62,10 @@ class App(QtWidgets.QSystemTrayIcon):
             self.diaryWindow.createEntryEvent.connect(self.createEntryFunc)
             self.diaryWindow.destroyEntryEvent.connect(self.destroyEntry)
             self.diaryWindow.editEntryEvent.connect(self.editEntry)
-            self.diaryWindow.showEntryEvent.connect(self.showEntry)            
+            self.diaryWindow.showEntryEvent.connect(self.showEntry)   
+        
+        elif self.diaryWindow and self.connection.isConnected:
+            self.diaryWindow.show()
                 
         elif self.connection.isConnected == False:
             print("You are not connected to the server")

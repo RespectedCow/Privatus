@@ -5,13 +5,28 @@ The purpose of this application is to be able to manage the user's computer and 
 """
 # Importing libraries
 from PyQt5 import QtCore, QtWidgets, QtGui
-import yaml, sys, requests, zipfile, os, subprocess, shutil
+import yaml, sys, requests, webbrowser
 
 # Import scripts
 from src import main as maingui
+from src import init
+
+# Variables
+init_functions = [
+    init.init
+]
 
 # Starting up
 def main():
+    # Initialize pre-launch functions
+    for fnc in init_functions:
+        fnc = fnc()
+        
+        if fnc.check_init():
+            fnc.run() # Will return any potential errors
+        else:
+            continue
+    
     app = QtWidgets.QApplication.instance()
 
     # check apps
@@ -71,7 +86,7 @@ def getLastestVersion(array):
 def updateApplication():
     
     # Checking for updates
-    with open("package.yaml", 'r') as stream:
+    with open("version.yaml", 'r') as stream:
         data = yaml.safe_load(stream)
     
     l_version_f = getVerFromTag(data['version']) 
@@ -96,14 +111,14 @@ def updateApplication():
       
     if releases.status_code == 200:  
         releases = releases.json()
+        updates = []
         for release in releases:
             branch = release["target_commitish"]
             r_version = release["tag_name"]
             r_version_f = getVerFromTag(r_version)
             
-            updates = []
             if branch == "main":
-                # Check if r_version is higher than l_version if so then notify the user
+                # Check if r_version is higher than l_version if so then notify the userk
                 if r_version_f > l_version_f:
                     updates.append((r_version, release))
                     
@@ -131,28 +146,10 @@ def updateApplication():
                 return
             
             # Here is the actual updating occurs
-            link = latest_update[1]["assets"][0]["browser_download_url"]
-            response = requests.get(link, allow_redirects=True)
-            save_to = "../" + latest_update[1]["assets"][0]["name"]
+            link = latest_update[1]["html_url"]
+            webbrowser.open(link)
             
-            with open(save_to, "wb") as f:
-                f.write(response.content)
-                
-            # Extract the file
-            with zipfile.ZipFile(save_to, "r") as f:
-                if os.path.exists("../privatus"):
-                    os.rename("../privatus", "../old-version")
-                f.extractall("../")
-                
-                subprocess.Popen("../privatus/privatus.py")
-                os.remove(save_to)
-                sys.exit()
-        else:
-            for folder in os.listdir("../"):
-                if folder != "privatus":
-                    shutil.rmtree("../" + str(folder))
-            
-            return
+            sys.exit()
         
     elif release.status_code == 404:
         print("No updates here." )
