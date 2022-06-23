@@ -1,0 +1,5 @@
+# Warning: do not change or delete the contents of this file or the program may break.
+
+client: {
+  client_path: ""
+}
